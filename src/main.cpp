@@ -30,6 +30,8 @@
 
 void setup() {
 
+void ui_init(void);
+
 }
 
 void loop() {
