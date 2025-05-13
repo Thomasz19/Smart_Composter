@@ -5,5 +5,5 @@
  * @brief   Implementation of the Motor Control and Status Screen UI.
  ******************************************************************************/
 
-#include "screen_motors.h"
+#include "screens/screen_motors.h"
 #include <lvgl.h>

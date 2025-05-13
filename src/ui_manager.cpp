@@ -9,11 +9,11 @@
  ******************************************************************************/
 
 #include "ui_manager.h"
-#include "screen_home.h"
-#include "screen_sensors.h"
-#include "screen_warnings.h"
-#include "screen_motors.h"
-#include "screen_history.h"
+#include "screens/screen_home.h"
+#include "screens/screen_sensors.h"
+#include "screens/screen_warnings.h"
+#include "screens/screen_motors.h"
+#include "screens/screen_history.h"
 #include "lvgl.h"
 
 void ui_init(void) {
@@ -45,3 +45,4 @@ void ui_switch_to(ScreenID screen) {
             break;
     }
 }
+

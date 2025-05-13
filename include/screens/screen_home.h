@@ -14,5 +14,6 @@
 #define SCREEN_HOME_H
 
 void create_home_screen(void);
+void update_home_screen(void);  // New function to handle flashing
 
 #endif /* SCREEN_HOME_H */

@@ -5,5 +5,5 @@
  * @brief   Implementation of the Warnings and Alerts Screen UI.
  ******************************************************************************/
 
-#include "screen_warnings.h"
+#include "screens/screen_warnings.h"
 #include <lvgl.h>

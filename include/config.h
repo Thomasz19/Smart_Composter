@@ -24,8 +24,8 @@
 #define NUM_SENSOR_NODES    3     // Number of temperature/humidity sensor groups
 
 // I2C pins (typically hardware I2C for Arduino GIGA)
-#define I2C_SDA             D20
-#define I2C_SCL             D21
+//#define I2C_SDA             D20
+//#define I2C_SCL             D21
 
 
 // ========== ULTRASONIC SENSOR ==========

@@ -5,5 +5,5 @@
  * @brief   Implementation of the Historical Data Screen UI.
  ******************************************************************************/
 
-#include "screen_history.h"
+#include "screens/screen_history.h"
 #include <lvgl.h>
