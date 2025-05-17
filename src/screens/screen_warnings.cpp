@@ -32,24 +32,8 @@ void create_warnings_screen() {
     lv_obj_clear_flag(warnings_screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scroll_dir(warnings_screen, LV_DIR_NONE);
 
-    // Header Bar 
-    lv_obj_t *header = lv_obj_create(warnings_screen);
-    lv_obj_set_size(header, lv_pct(100), 80);
-    lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
-    lv_obj_set_style_bg_color(header, lv_color_hex(0x42649f), 0); 
-    lv_obj_set_style_bg_opa(header, LV_OPA_COVER, 0);
-    lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_scroll_dir(header, LV_DIR_NONE); // Prevent any scrolling
-
-    // Title
-    lv_obj_t *title = lv_label_create(header);
-    lv_label_set_text(title, "Warnings");
-    lv_obj_center(title);
-    lv_obj_set_style_text_color(title, lv_color_hex(0xc0c9d9), 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_48, 0);
-
-    // create drop down menu
-    create_global_dropdown(warnings_screen);
+    // create header
+    create_header(warnings_screen, "Warnings");
 }
 
 

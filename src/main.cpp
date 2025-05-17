@@ -17,8 +17,6 @@
  * Dependencies:
  *  - arduino_gigaDisplay
  *  - arduino_gigaDisplayTouch
- *  - arduino_gigaDisplay_GFX
- *  - arduinoGraphics
  *  - Adafruit GFX Library
  *  - LVGL
  ******************************************************************************/
@@ -47,7 +45,7 @@ void global_input_event_cb(lv_event_t * e);
 
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
-const unsigned long gINACTIVITY_TIMEOUT = 120000; // 120 sec
+const unsigned long gINACTIVITY_TIMEOUT = 2400000; // 20 sec
 
 
 // ================= INIT SETUP =================

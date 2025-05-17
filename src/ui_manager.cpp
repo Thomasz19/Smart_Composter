@@ -18,14 +18,17 @@
 
 #include <string.h>
 
-//static lv_obj_t *dropdown = nullptr;
 extern void global_input_event_cb(lv_event_t * e);
 
 static lv_style_t dropdown_list_style;
-int selected_index = 0;
+
 static lv_obj_t *dropdown = nullptr;   // The global dropdown instance
+static int       selected_index = 0;  // default to Sensor Overview
 
 
+/*
+Function: Drop down selection even handler
+*/
 static void dropdown_event_handler(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * obj = lv_event_get_target_obj(e);
@@ -36,6 +39,9 @@ static void dropdown_event_handler(lv_event_t * e) {
     }
 }
 
+/*
+Function: Create the drop down menu button with its items
+*/
 void create_global_dropdown(lv_obj_t *parent) {
     dropdown = lv_dropdown_create(parent);
     lv_obj_set_size(dropdown, 80, 76);  // width: 150px, height: 40px
@@ -86,24 +92,55 @@ void create_global_dropdown(lv_obj_t *parent) {
     
 }
 
+/*
+Function: Handles the selection of each item in the drop down menu
+*/
 void handle_screen_selection(const char *selected_label) {
-    if (strcmp(selected_label, "Sensor Overview") == 0) {
-        create_sensor_screen();
-        selected_index = 0;
-    } else if (strcmp(selected_label, "Manual Control") == 0) {
-        create_manual_control_screen();
-        selected_index = 1;
-    } else if (strcmp(selected_label, "Warnings") == 0) {
-        create_warnings_screen();
-        selected_index = 2;
-    } else if (strcmp(selected_label, "History") == 0) {
-        create_history_screen();
-        selected_index = 3;
-    } else if (strcmp(selected_label, "Settings") == 0) {
-        create_settings_screen();
-        selected_index = 4;
+    int new_index = -1;
+
+    if      (!strcmp(selected_label, "Sensor Overview"))   new_index = 0;
+    else if (!strcmp(selected_label, "Manual Control"))    new_index = 1;
+    else if (!strcmp(selected_label, "Warnings"))          new_index = 2;
+    else if (!strcmp(selected_label, "History"))           new_index = 3;
+    else if (!strcmp(selected_label, "Settings"))          new_index = 4;
+
+    // if it’s changed, actually switch
+    if (new_index >= 0 && new_index != selected_index) {
+        selected_index = new_index;
+        switch (new_index) {
+            case 0: create_sensor_screen();         break;
+            case 1: create_manual_control_screen(); break;
+            case 2: create_warnings_screen();       break;
+            case 3: create_history_screen();        break;
+            case 4: create_settings_screen();       break;
+        }
     }
-    lv_dropdown_set_selected(dropdown, selected_index);
+    if (dropdown) {
+      lv_dropdown_set_selected(dropdown, selected_index);
+      lv_dropdown_close(dropdown);  // close the list to avoid re-opening during its event
+    }
 
 }
 
+void create_header(lv_obj_t *parent, const char *title_txt) {
+    
+    // Header Bar
+    lv_obj_t *header = lv_obj_create(parent);
+    lv_obj_set_size(header, lv_pct(100), 80);
+    lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
+    lv_obj_set_style_bg_color(header, lv_color_hex(0x42649f), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(header, LV_OPA_COVER,    LV_PART_MAIN);
+    lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scroll_dir(header, LV_DIR_NONE);
+
+    // Title Label
+    lv_obj_t *title = lv_label_create(header);
+    lv_label_set_text(title, title_txt);
+    lv_obj_center(title);
+    lv_obj_set_style_text_color(title, lv_color_hex(0xc0c9d9), 0);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_48,  0);
+
+    // Global navigation dropdown (icon-only)
+    create_global_dropdown(parent);
+}
+//EOF

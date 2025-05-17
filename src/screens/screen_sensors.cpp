@@ -37,7 +37,7 @@ TempThresholds temp_thresholds = {15.0, 30.0, 35.0};
 /*
 functions
 */
-static lv_color_t get_temp_color(float temp) {
+static lv_color_t get_temp_color(float temp) { // WARNING: not used yet
     if (temp >= temp_thresholds.good_min && temp <= temp_thresholds.good_max)
         return lv_color_hex(0x1ac41f); // green
     else if (temp <= temp_thresholds.warn_max)
@@ -68,7 +68,7 @@ void create_sensor_screen(void) {
     lv_scr_load(sensor_screen);
 
     // Register the global input event callback
-    lv_obj_add_event_cb(sensor_screen, global_input_event_cb, LV_EVENT_ALL, NULL);
+    //lv_obj_add_event_cb(sensor_screen, global_input_event_cb, LV_EVENT_ALL, NULL);
 
     // Background
     lv_obj_set_style_bg_color(sensor_screen, lv_color_hex(0xc0c9d9), LV_PART_MAIN);
@@ -76,24 +76,8 @@ void create_sensor_screen(void) {
     lv_obj_clear_flag(sensor_screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_scroll_dir(sensor_screen, LV_DIR_NONE);
 
-    // Header Bar 
-    lv_obj_t *header = lv_obj_create(sensor_screen);
-    lv_obj_set_size(header, lv_pct(100), 80);
-    lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
-    lv_obj_set_style_bg_color(header, lv_color_hex(0x42649f), 0); 
-    lv_obj_set_style_bg_opa(header, LV_OPA_COVER, 0);
-    lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_scroll_dir(header, LV_DIR_NONE); // Prevent any scrolling
-
-    // Title
-    lv_obj_t *title = lv_label_create(header);
-    lv_label_set_text(title, "Sensor Overview");
-    lv_obj_center(title);
-    lv_obj_set_style_text_color(title, lv_color_hex(0xc0c9d9), 0);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_48, 0);
-
-    // create drop down menu
-    create_global_dropdown(sensor_screen);
+    // create header
+    create_header(sensor_screen, "Sensor Overview");
 
     // ===== Sensor Data Grid =====
     lv_obj_t *grid = lv_obj_create(sensor_screen);

@@ -21,4 +21,11 @@
 void create_global_dropdown(lv_obj_t *parent);
 void handle_screen_selection(const char *selected_label);
 
+/**
+ * @brief Create a standard header bar on the given parent screen.
+ * @param parent     The screen or container to attach the header to.
+ * @param title_txt  The title string to display centered in the header.
+ */
+void create_header(lv_obj_t *parent, const char *title_txt);
+
 #endif /* UI_MANAGER_H */
