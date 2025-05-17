@@ -12,8 +12,25 @@
  * and hardware abstraction across the firmware.
  ******************************************************************************/
 
+/*
+here i define the color pallet of the LCD stuff
+
+*/
+
+
+
+
 #ifndef CONFIG_H_
 #define CONFIG_H_
+
+
+// ======= SIMULATION MODE =======
+#define SIMULATION_MODE    1   // Set to 1 to enable fake sensor data; 0 = real sensors
+
+// Sensor thresholds (adjust as needed)
+#define TEMP_GOOD_MIN     15.0
+#define TEMP_GOOD_MAX     30.0
+#define TEMP_WARN_MAX     35.0
 
 // ========== GENERAL ==========
 #define SERIAL_BAUDRATE     115200

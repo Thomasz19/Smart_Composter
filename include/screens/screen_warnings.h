@@ -13,6 +13,15 @@
 #ifndef SCREEN_WARNINGS_H
 #define SCREEN_WARNINGS_H
 
+#include <lvgl.h>
+
+enum FooterStatus {
+    FOOTER_OK,
+    FOOTER_WARNING
+};
+
+void create_footer(lv_obj_t *parent);
+void update_footer_status(FooterStatus status);
 void create_warnings_screen(void);
 
 #endif /* SCREEN_WARNINGS_H */

@@ -16,16 +16,9 @@
 #ifndef UI_MANAGER_H
 #define UI_MANAGER_H
 
-// Enum for identifying each screen
-typedef enum {
-    SCREEN_HOME,
-    SCREEN_SENSORS,
-    SCREEN_WARNINGS,
-    SCREEN_MOTORS,
-    SCREEN_HISTORY
-} ScreenID;
+#include <lvgl.h>
 
-void ui_init(void);
-void ui_switch_to(ScreenID screen);
+void create_global_dropdown(lv_obj_t *parent);
+void handle_screen_selection(const char *selected_label);
 
 #endif /* UI_MANAGER_H */

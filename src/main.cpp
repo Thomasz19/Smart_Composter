@@ -26,25 +26,31 @@
  //Includes --------------------------------------------------------------------
 #include <Arduino.h>
 #include <lvgl.h>
+
+#include "fault_handler.h"
 #include "ui_manager.h"
 #include "config.h"
+
 #include "screens/screen_home.h"
+#include "screens/screen_sensors.h"
+#include "screens/screen_warnings.h"
+
 #include "Arduino_H7_Video.h"
 #include "Arduino_GigaDisplayTouch.h"
 
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
 
-//Prototype Functions ---------------------------------------------------------
+// ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
 
 
-// Global Variables -----------------------------------------------------------
+// ================= Global Variables =================
 unsigned long glast_input_time = 0;
-const unsigned long gINACTIVITY_TIMEOUT = 10000; // 1 minute
+const unsigned long gINACTIVITY_TIMEOUT = 120000; // 120 sec
 
 
-
+// ================= INIT SETUP =================
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
 
@@ -54,8 +60,14 @@ void setup() {
   create_home_screen();
 }
 
+// ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
+
+   // Only update if we're on the sensor screen
+  if (is_sensor_screen_active()) {
+    //update_sensor_screen();
+  }
 
   // Inactivity timeout check
   if (millis() - glast_input_time > gINACTIVITY_TIMEOUT) {
@@ -63,8 +75,11 @@ void loop() {
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
+  
+  update_footer_status(FOOTER_OK);
 }
 
+// ================= FUNCTIONS =================
 void global_input_event_cb(lv_event_t * e) {
   glast_input_time = millis();  // Reset inactivity timer
 }

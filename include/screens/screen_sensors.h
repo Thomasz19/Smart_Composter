@@ -15,4 +15,8 @@
 
 void create_sensor_screen(void);
 
+void update_sensor_screen(void);
+
+bool is_sensor_screen_active(void);
+
 #endif /* SCREEN_SENSORS_H */

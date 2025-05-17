@@ -21,7 +21,8 @@ static void screen_touch_cb(lv_event_t * e) {
 }
 
 void create_home_screen(void) {
-    lv_obj_t *screen = lv_scr_act();
+    lv_obj_t *screen = lv_obj_create(NULL);
+    lv_scr_load(screen);
 
     // Set black background
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x0032A0), LV_PART_MAIN);

@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file    screen_motors.h
+ * @file    screen_manual.h
  * @author  Thomas Zoldowski
  * @date    May 10, 2025
  * @brief   Header for the Motor Control and Status Screen UI.
@@ -10,9 +10,11 @@
  *  - Optional: RPM readout if using Hall sensor for feedback
  ******************************************************************************/
 
-#ifndef SCREEN_MOTORS_H
-#define SCREEN_MOTORS_H
+#ifndef SCREEN_MANUAL_H
+#define SCREEN_MANUAL_H
 
-void create_motor_screen(void);
+#include <lvgl.h>
+
+void create_manual_control_screen(void);
 
 #endif /* SCREEN_MOTORS_H */
