@@ -54,8 +54,10 @@ void setup() {
 
   Display.begin();
   TouchDetector.begin();
-
+  
+  create_warnings_screen();
   create_home_screen();
+  add_warning("Test");
 }
 
 // ================= MAIN LOOP =================

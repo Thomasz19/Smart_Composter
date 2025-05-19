@@ -22,6 +22,20 @@ enum FooterStatus {
 
 void create_footer(lv_obj_t *parent);
 void update_footer_status(FooterStatus status);
+
+/**
+ * Create & show the Warnings screen.
+ * Must be called once to initialize.
+ */
 void create_warnings_screen(void);
 
+/**
+ * Append a new warning. Timestamp and desc must be null-terminated strings.
+ * The table will grow by one row automatically.
+ */
+void add_warning(const char *description);
+
+
 #endif /* SCREEN_WARNINGS_H */
+
+// EOF

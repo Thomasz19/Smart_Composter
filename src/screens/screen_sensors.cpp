@@ -168,20 +168,6 @@ void create_sensor_screen(void) {
     lv_obj_set_style_text_font(label_o2, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_o2, lv_color_black(), 0);
 
-
-    // // Create arrow button in top-left
-    // lv_obj_t *arrow_btn = lv_btn_create(sensor_screen); 
-    // lv_obj_set_size(arrow_btn, 80, 80);
-    // lv_obj_align(arrow_btn, LV_ALIGN_TOP_RIGHT, 0, 0);  // 10 px from top and left
-    // lv_obj_add_event_cb(arrow_btn, [](lv_event_t * e) {
-    //     create_manual_control_screen();  
-    // }, LV_EVENT_CLICKED, NULL);
-
-    // // Add arrow icon to the button
-    // lv_obj_t *arrow_icon = lv_label_create(arrow_btn);
-    // lv_label_set_text(arrow_icon, LV_SYMBOL_RIGHT);  // or LV_SYMBOL_LEFT if you're going "back"
-    // lv_obj_center(arrow_icon);
-
     // Create footer
     create_footer(sensor_screen);
 
