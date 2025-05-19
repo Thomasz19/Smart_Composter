@@ -5,8 +5,7 @@
  * @brief   Implementation of the Motor Control and Status Screen UI.
  ******************************************************************************/
 /*
-Things that need to be added:
-- keypad
+Things that need to be added:-
 - password protection
 - Money because doing this shit for free should be illegal
 */
@@ -16,8 +15,6 @@ Things that need to be added:
 #include "screens/screen_warnings.h"
 
 #include "ui_manager.h"
-
-#include <lvgl.h>
 #include <string.h>
 #include <Arduino.h>
 
@@ -43,15 +40,14 @@ static lv_obj_t *sb_hum_low[3];
 static char user_pin[5] = "0000";
 
 // ---- Modal objects ----
-static lv_obj_t * modal_bg;
-static lv_obj_t * modal_ta;
-static lv_obj_t * modal_kb;
-static bool       modal_is_for_pin_change = false;
-static int        modal_sensor_index = -1;
+static lv_obj_t *modal_bg = NULL;
+static lv_obj_t *modal_ta = NULL;
+static lv_obj_t *modal_kb = NULL;
+static int        modal_field_id = -1;
+static lv_obj_t * modal_target_btn  = NULL;
 
 // Forward declarations
 static void params_btn_cb(lv_event_t *e);
-static void change_pin_btn_cb(lv_event_t *e);
 static void modal_kb_event_cb(lv_event_t *e);
 
 
@@ -73,13 +69,12 @@ void create_settings_screen() {
 
     // Tabview on the left
     lv_obj_t *tabview = lv_tabview_create(settings_screen);
-    lv_tabview_set_tab_bar_position(tabview, LV_DIR_LEFT);  // left tabs :contentReference[oaicite:1]{index=1}
-    lv_tabview_set_tab_bar_size    (tabview, 170);           // 80px wide
+    lv_tabview_set_tab_bar_position(tabview, LV_DIR_LEFT);  
+    lv_tabview_set_tab_bar_size    (tabview, 170);     
 
     // Size & position between header & footer
     lv_obj_set_size(tabview, lv_pct(100), TABVIEW_H);
     lv_obj_align   (tabview, LV_ALIGN_TOP_MID, 0, HEADER_H);
-    //lv_obj_set_style_bg_color(tabview, lv_color_hex(0xc0c9d9), LV_PART_MAIN);
     lv_obj_set_style_text_font(tabview, &lv_font_montserrat_40, 0);
 
     lv_obj_t * tab_buttons = lv_tabview_get_tab_bar(tabview);
@@ -105,7 +100,6 @@ void create_settings_screen() {
     lv_obj_set_style_bg_opa(tab_3, LV_OPA_COVER, 0);
 
     // Tab 1 screen
-    // ---- inside create_settings_screen(), after lv_tabview_add_tab(tv,"Sensors") ----
     lv_obj_set_style_pad_all(tab_1, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
     lv_obj_t * grid = lv_obj_create(tab_1);
     lv_obj_set_size(grid, lv_pct(100), lv_pct(100));      // fill the tab area
@@ -166,6 +160,8 @@ void create_settings_screen() {
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, buf);
         lv_obj_center(lbl);
+        intptr_t id = r*3 + 0;
+        lv_obj_add_event_cb(btn, params_btn_cb, LV_EVENT_CLICKED, (void*)id);
         }
         // High (temp_high)
         {
@@ -177,6 +173,8 @@ void create_settings_screen() {
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, buf);
         lv_obj_center(lbl);
+        intptr_t id = r*3 + 1;
+        lv_obj_add_event_cb(btn, params_btn_cb, LV_EVENT_CLICKED, (void*)id);
         }
         // Low (hum_low)
         {
@@ -188,6 +186,8 @@ void create_settings_screen() {
         lv_obj_t *lbl = lv_label_create(btn);
         lv_label_set_text(lbl, buf);
         lv_obj_center(lbl);
+        intptr_t id = r*3 + 2;
+        lv_obj_add_event_cb(btn, params_btn_cb, LV_EVENT_CLICKED, (void*)id);
         }
     }
     lv_obj_t *lbl;
@@ -205,5 +205,100 @@ void create_settings_screen() {
 
 }
 
+static void params_btn_cb(lv_event_t * e) {
+    // remember who launched us and what field
+    modal_target_btn = (lv_obj_t *)lv_event_get_target(e);
+    modal_field_id   = (int)(intptr_t)lv_event_get_user_data(e);
 
+    // translucent full‐screen bg
+    modal_bg = lv_obj_create(lv_scr_act());
+    lv_obj_set_size(modal_bg, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_bg_color(modal_bg, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(modal_bg, LV_OPA_50, 0);
 
+    // create close button
+    lv_obj_t * close_btn = lv_btn_create(modal_bg);
+    lv_obj_set_size(close_btn, 100, 100);
+    lv_obj_align(close_btn, LV_ALIGN_TOP_RIGHT, -10, 10);
+
+    lv_obj_t * close_lbl = lv_label_create(close_btn);
+    lv_label_set_text(close_lbl, LV_SYMBOL_CLOSE);
+    lv_obj_center(close_lbl);
+    lv_obj_set_style_text_font(
+    close_lbl,
+    &lv_font_montserrat_48,
+    LV_PART_MAIN | LV_STATE_DEFAULT
+    );
+
+    // Hook its click event to delete the overlay
+    lv_obj_add_event_cb(close_btn, [](lv_event_t * e){
+        LV_UNUSED(e);
+        // Destroy the whole modal (bg → ta, kb, cancel get removed too)
+        lv_obj_del(modal_bg);
+        // Clear your globals
+        modal_bg         = NULL;
+        modal_ta         = NULL;
+        modal_kb         = NULL;
+        modal_target_btn = NULL;
+        modal_field_id   = -1;
+    }, LV_EVENT_CLICKED, NULL);
+
+    // create textarea for numeric input
+    modal_ta = lv_textarea_create(modal_bg);
+    lv_obj_set_width(modal_ta, 200);
+    lv_obj_align(modal_ta, LV_ALIGN_CENTER, 0, -90);
+    lv_textarea_set_one_line(modal_ta, true);
+    lv_textarea_set_max_length(modal_ta, 6);
+    lv_textarea_set_text(modal_ta, "");
+    lv_obj_set_style_text_font(
+    modal_ta,
+    &lv_font_montserrat_40,
+    LV_PART_MAIN | LV_STATE_DEFAULT
+    );
+    // create keyboard
+    modal_kb = lv_keyboard_create(modal_bg);
+    lv_keyboard_set_mode(modal_kb, LV_KEYBOARD_MODE_NUMBER);
+    lv_obj_set_style_text_font(
+    modal_kb,
+    &lv_font_montserrat_48,         // pick any size you’ve built into LVGL
+    LV_PART_MAIN | LV_STATE_DEFAULT
+    );
+    lv_obj_set_size(modal_kb, lv_pct(100), lv_pct(60));
+    lv_obj_align(modal_kb, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_keyboard_set_textarea(modal_kb, modal_ta);
+
+    // when the user presses “Enter/OK”, we’ll get an LV_EVENT_READY
+    lv_obj_add_event_cb(modal_kb, modal_kb_event_cb, LV_EVENT_READY, NULL);
+}
+
+static void modal_kb_event_cb(lv_event_t * e) {
+    // grab the text and convert to float
+    const char * txt = lv_textarea_get_text(modal_ta);
+    float new_val = atof(txt);
+
+    // apply to your sensor_thresh[]
+    int sensor = modal_field_id / 3;
+    int field  = modal_field_id % 3;
+    switch(field) {
+        case 0: sensor_thresh[sensor].temp_low  = new_val; break;
+        case 1: sensor_thresh[sensor].temp_high = new_val; break;
+        case 2: sensor_thresh[sensor].hum_low   = new_val; break;
+    }
+
+    // update the original button’s label
+    // assume its first child is the label
+    lv_obj_t * lbl = lv_obj_get_child((lv_obj_t *)modal_target_btn, 0);
+    static char buf[16];
+    if(field < 2) {  // temperature
+        snprintf(buf, sizeof(buf), "%.1f°F", new_val);
+    } else {         // humidity
+        snprintf(buf, sizeof(buf), "%.1f%%", new_val);
+    }
+    lv_label_set_text(lbl, buf);
+    lv_obj_center(lbl);
+
+    // destroy the modal overlay (bg -> ta & kb get cleaned up too)
+    lv_obj_del(modal_bg);
+    modal_bg = modal_ta = modal_kb = modal_target_btn = NULL;
+    modal_field_id = -1;
+}
