@@ -9,6 +9,8 @@
 #include "screens/screen_sensors.h"
 #include "screens/screen_warnings.h"
 #include "ui_manager.h"
+#include <string.h>
+#include <Arduino.h>
 
 
 static lv_obj_t* manual_screen = nullptr;
@@ -20,6 +22,9 @@ static lv_obj_t* manual_screen = nullptr;
 void create_manual_control_screen() {
     manual_screen = lv_obj_create(NULL);
     lv_scr_load(manual_screen);
+
+    // Debug
+    //Serial.println("Create manual screen");
 
     // Background color 
     lv_obj_set_style_bg_color(manual_screen, lv_color_hex(0xc0c9d9), LV_PART_MAIN);
@@ -83,27 +88,3 @@ void create_manual_control_screen() {
     
     create_footer(manual_screen);
 }
-
-// Callback: show a keypad + masked textarea for PIN entry
-// static void show_keypad_cb(lv_event_t * e) {
-//     lv_obj_t *parent = lv_event_get_user_data(e); // or use lv_scr_act()
-
-//     // Create a modal background
-//     lv_obj_t *bg = lv_obj_create(lv_scr_act());
-//     lv_obj_set_size(bg, lv_pct(100), lv_pct(100));
-//     lv_obj_set_style_bg_color(bg, lv_color_black(), 0);
-//     lv_obj_set_style_bg_opa(bg, LV_OPA_40, 0);
-
-//     // Text area for PIN (masked)
-//     lv_obj_t *ta = lv_textarea_create(lv_scr_act());
-//     lv_obj_set_width(ta, 200);
-//     lv_textarea_set_password_mode(ta, true);
-//     lv_textarea_set_max_length(ta, 4);
-//     lv_obj_align(ta, LV_ALIGN_CENTER, 0, -80);
-
-//     // Keypad
-//     lv_obj_t *kb = lv_kb_create(lv_scr_act());
-//     lv_obj_set_size(kb, lv_pct(90), 200);
-//     lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, 0);
-//     lv_kb_set_textarea(kb, ta);
-// }

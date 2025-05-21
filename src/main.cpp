@@ -24,6 +24,8 @@
  //Includes --------------------------------------------------------------------
 #include <Arduino.h>
 #include <lvgl.h>
+#include <stdio.h>
+#include <mbed.h>
 
 #include "fault_handler.h"
 #include "ui_manager.h"
@@ -47,27 +49,28 @@ void global_input_event_cb(lv_event_t * e);
 unsigned long glast_input_time = 0;
 const unsigned long gINACTIVITY_TIMEOUT = 2400000; // 20 sec
 
+// ================= WATCH DOG =================
+mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 
 // ================= INIT SETUP =================
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
-
+  Serial.println("Serial.println working");
   Display.begin();
   TouchDetector.begin();
   
   create_warnings_screen();
   create_home_screen();
   add_warning("Test");
+
+  // Setup watchdog
+  watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
+
 }
 
 // ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
-
-   // Only update if we're on the sensor screen
-  if (is_sensor_screen_active()) {
-    //update_sensor_screen();
-  }
 
   // Inactivity timeout check
   if (millis() - glast_input_time > gINACTIVITY_TIMEOUT) {
@@ -75,8 +78,9 @@ void loop() {
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
-  
   update_footer_status(FOOTER_OK);
+  watchdog.kick();
+  delay(5);
 }
 
 // ================= FUNCTIONS =================

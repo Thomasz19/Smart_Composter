@@ -15,7 +15,7 @@
 #include "screens/screen_manual.h"
 #include "screens/screen_history.h"
 #include "screens/screen_settings.h"
-
+#include <Arduino.h>
 #include <string.h>
 
 extern void global_input_event_cb(lv_event_t * e);
@@ -43,6 +43,9 @@ static void dropdown_event_handler(lv_event_t * e) {
 Function: Create the drop down menu button with its items
 */
 void create_global_dropdown(lv_obj_t *parent) {
+    
+    Serial.println("Create global dropdown"); // Debug
+
     dropdown = lv_dropdown_create(parent);
     lv_obj_set_size(dropdown, 80, 76);  // width: 150px, height: 40px
     lv_obj_align(dropdown, LV_ALIGN_TOP_LEFT, 2, 2);
@@ -65,7 +68,7 @@ void create_global_dropdown(lv_obj_t *parent) {
     lv_dropdown_set_selected(dropdown, 0);
     lv_dropdown_set_text(dropdown, "");
 
-    lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_set_style_text_font(dropdown, &lv_font_montserrat_48, LV_PART_MAIN | LV_STATE_DEFAULT);
     
     // drop down listed items
@@ -76,26 +79,38 @@ void create_global_dropdown(lv_obj_t *parent) {
     lv_style_set_bg_color(&dropdown_list_style, lv_color_hex(0x42649F));
     lv_style_set_bg_grad_color(&dropdown_list_style, lv_color_hex(0xA3B7E4));
     lv_style_set_bg_grad_dir(&dropdown_list_style, LV_GRAD_DIR_HOR);
-    lv_obj_t * list = lv_dropdown_get_list(dropdown); /* Get list */
-    lv_dropdown_open(dropdown);  // Force list to be created (must be open at least once)
+    Serial.println("[GDL] opening dropdown"); // Debug
+   
+    // Attach event callback that will handle styling and selection
+    lv_obj_add_event_cb(dropdown, [](lv_event_t *e) {
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
 
-    if (list) {
-        lv_obj_add_style(list, &dropdown_list_style, LV_PART_MAIN | LV_STATE_DEFAULT);
-        // Prevent scrolling
-        lv_obj_set_style_max_height(list, LV_SIZE_CONTENT, 0); // Prevent internal height limits
-        lv_obj_set_scroll_dir(list, LV_DIR_NONE);              // Disable scrolling
-        lv_obj_set_height(list, 50 * 5);  
+    if (code == LV_EVENT_CLICKED) {
+        lv_obj_t *list = lv_dropdown_get_list(target);
+        if (list) {
+            // Apply custom style only when the list is available
+            lv_obj_add_style(list, &dropdown_list_style, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_max_height(list, LV_SIZE_CONTENT, 0);
+            lv_obj_set_scroll_dir(list, LV_DIR_NONE);
+            lv_obj_set_height(list, 71 * 5);
+        }
     }
 
-    lv_dropdown_close(dropdown);  // Optional: close after styling
-    
-    
+    if (code == LV_EVENT_VALUE_CHANGED) {
+        char buf[32];
+        lv_dropdown_get_selected_str(target, buf, sizeof(buf));
+        handle_screen_selection(buf);
+    }
+}, LV_EVENT_ALL, NULL);
+    Serial.println("[GDL] closing dropdown"); // Debug
 }
 
 /*
 Function: Handles the selection of each item in the drop down menu
 */
 void handle_screen_selection(const char *selected_label) {
+    Serial.println("[GDL] changing Screens..."); // Debug
     int new_index = -1;
 
     if      (!strcmp(selected_label, "Sensor Overview"))   new_index = 0;
@@ -103,6 +118,7 @@ void handle_screen_selection(const char *selected_label) {
     else if (!strcmp(selected_label, "Warnings"))          new_index = 2;
     else if (!strcmp(selected_label, "History"))           new_index = 3;
     else if (!strcmp(selected_label, "Settings"))          new_index = 4;
+    else new_index = 0;
 
     // if it’s changed, actually switch
     if (new_index >= 0 && new_index != selected_index) {
@@ -113,17 +129,18 @@ void handle_screen_selection(const char *selected_label) {
             case 2: create_warnings_screen();       break;
             case 3: create_history_screen();        break;
             case 4: create_settings_screen();       break;
+            default: create_sensor_screen();        break;
         }
     }
     if (dropdown) {
       lv_dropdown_set_selected(dropdown, selected_index);
       lv_dropdown_close(dropdown);  // close the list to avoid re-opening during its event
     }
-
+    Serial.println("[GDL] screen change COMPLETE"); // Debug
 }
 
 void create_header(lv_obj_t *parent, const char *title_txt) {
-    
+    Serial.println("[gH] creating header"); // Debug
     // Header Bar
     lv_obj_t *header = lv_obj_create(parent);
     lv_obj_set_size(header, lv_pct(100), 80);
@@ -141,6 +158,7 @@ void create_header(lv_obj_t *parent, const char *title_txt) {
     lv_obj_set_style_text_font(title, &lv_font_montserrat_48,  0);
 
     // Global navigation dropdown (icon-only)
+    Serial.println("[gH] creating GDL"); // Debug
     create_global_dropdown(parent);
 }
 //EOF

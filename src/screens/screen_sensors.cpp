@@ -64,6 +64,7 @@ static void update_sensor_values() {
 }
 
 void create_sensor_screen(void) {
+
     sensor_screen = lv_obj_create(NULL);
     lv_scr_load(sensor_screen);
 
