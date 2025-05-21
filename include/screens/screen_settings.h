@@ -15,7 +15,8 @@
 
 #include <lvgl.h>
 
-void create_settings_screen();
+lv_obj_t* create_settings_screen();
+
 void setup_ui_tab2(lv_obj_t *tab_2);
 void setup_ui_tab3(lv_obj_t *tab_3);
 void setup_ui_tab1(lv_obj_t *tab_1);

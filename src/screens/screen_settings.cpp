@@ -66,7 +66,7 @@ static void params_btn_cb(lv_event_t *e);
 static void modal_kb_event_cb(lv_event_t *e);
 static void config_time_btn_cb(lv_event_t *e);
 
-void create_settings_screen() {
+lv_obj_t* create_settings_screen() {
     Serial.println("[UI] Creating Settings screen"); // Debug
 
     // Constants for layout
@@ -77,7 +77,7 @@ void create_settings_screen() {
 
     // Setup Screen
     settings_screen = lv_obj_create(NULL);
-    lv_scr_load(settings_screen);
+    
 
     // create header + footer
     create_header(settings_screen, "Settings");
@@ -127,6 +127,7 @@ void create_settings_screen() {
     Serial.println("[UI] Initializing Tab 3");
     setup_ui_tab3(tab_3); 
 
+    return settings_screen;
 }
 void setup_ui_tab1(lv_obj_t *tab_1) 
 {
@@ -169,7 +170,7 @@ void setup_ui_tab1(lv_obj_t *tab_1)
         LV_GRID_ALIGN_CENTER, c, 1,
         LV_GRID_ALIGN_CENTER, 0, 1);
 
-        // Optional styling
+        // styling
         lv_obj_set_style_text_font(label_col, &lv_font_montserrat_40, 0);
         lv_obj_set_style_text_color(label_col, lv_color_black(), 0);
     }

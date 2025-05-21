@@ -6,7 +6,7 @@
  ******************************************************************************/
 
 #include "config.h"
-#include <lvgl.h>
+
 #include <Arduino.h>
 #include "screens/screen_sensors.h"
 #include "screens/screen_warnings.h"
@@ -63,10 +63,10 @@ static void update_sensor_values() {
 #endif
 }
 
-void create_sensor_screen(void) {
+lv_obj_t* create_sensor_screen(void) {
 
     sensor_screen = lv_obj_create(NULL);
-    lv_scr_load(sensor_screen);
+    
 
     // Register the global input event callback
     //lv_obj_add_event_cb(sensor_screen, global_input_event_cb, LV_EVENT_ALL, NULL);
@@ -173,6 +173,7 @@ void create_sensor_screen(void) {
     create_footer(sensor_screen);
 
     //update_sensor_values(); // Initial values
+    return sensor_screen;
 }
 
 bool is_sensor_screen_active() {

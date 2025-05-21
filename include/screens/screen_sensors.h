@@ -10,10 +10,13 @@
  *  - Optional: icons or color indicators for sensor state
  ******************************************************************************/
 
+
 #ifndef SCREEN_SENSORS_H
 #define SCREEN_SENSORS_H
 
-void create_sensor_screen(void);
+#include <lvgl.h>
+
+lv_obj_t* create_sensor_screen(void);
 
 void update_sensor_screen(void);
 

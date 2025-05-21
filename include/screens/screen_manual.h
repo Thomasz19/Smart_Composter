@@ -15,6 +15,6 @@
 
 #include <lvgl.h>
 
-void create_manual_control_screen(void);
+lv_obj_t* create_manual_control_screen(void);
 
 #endif /* SCREEN_MOTORS_H */

@@ -27,7 +27,7 @@ void update_footer_status(FooterStatus status);
  * Create & show the Warnings screen.
  * Must be called once to initialize.
  */
-void create_warnings_screen(void);
+lv_obj_t* create_warnings_screen(void);
 
 /**
  * Append a new warning. Timestamp and desc must be null-terminated strings.

@@ -19,9 +19,9 @@ static lv_obj_t* manual_screen = nullptr;
 // Forward for keypad callback
 //static void show_keypad_cb(lv_event_t * e);
 
-void create_manual_control_screen() {
+lv_obj_t* create_manual_control_screen() {
     manual_screen = lv_obj_create(NULL);
-    lv_scr_load(manual_screen);
+    
 
     // Debug
     //Serial.println("Create manual screen");
@@ -87,4 +87,5 @@ void create_manual_control_screen() {
     lv_obj_set_style_text_font(act_lbl, &lv_font_montserrat_48, 0);
     
     create_footer(manual_screen);
+    return manual_screen;
 }

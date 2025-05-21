@@ -13,6 +13,8 @@
 #ifndef SCREEN_HISTORY_H
 #define SCREEN_HISTORY_H
 
-void create_history_screen(void);
+#include <lvgl.h>
+
+lv_obj_t* create_history_screen(void);
 
 #endif /* SCREEN_HISTORY_H */

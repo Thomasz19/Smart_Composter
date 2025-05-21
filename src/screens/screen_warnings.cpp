@@ -85,14 +85,13 @@ static void warnings_table_draw_cb(lv_event_t * e)
         }
 }
 
-void create_warnings_screen() {
+lv_obj_t* create_warnings_screen() {
     const int HEADER_H  = 80;
     const int FOOTER_H  = 60;
     const int SCREEN_H  = 480;
     const int TABLE_H   = SCREEN_H - HEADER_H - FOOTER_H;
 
     warnings_screen = lv_obj_create(NULL);
-    lv_scr_load(warnings_screen);
     
     // Background color 
     // lv_obj_set_style_bg_color(warnings_screen, lv_color_hex(0xFFEEEE), LV_PART_ITEMS);
@@ -130,6 +129,7 @@ void create_warnings_screen() {
     lv_obj_set_scroll_dir(warnings_table, LV_DIR_VER);
     
     add_warning("Test");
+    return warnings_screen;
 }
 
 

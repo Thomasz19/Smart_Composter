@@ -24,7 +24,7 @@ static lv_style_t dropdown_list_style;
 
 static lv_obj_t *dropdown = nullptr;   // The global dropdown instance
 static int       selected_index = 0;  // default to Sensor Overview
-
+static lv_obj_t *current_screen = nullptr;
 
 /*
 Function: Drop down selection even handler
@@ -123,20 +123,41 @@ void handle_screen_selection(const char *selected_label) {
     // if it’s changed, actually switch
     if (new_index >= 0 && new_index != selected_index) {
         selected_index = new_index;
-        switch (new_index) {
-            case 0: create_sensor_screen();         break;
-            case 1: create_manual_control_screen(); break;
-            case 2: create_warnings_screen();       break;
-            case 3: create_history_screen();        break;
-            case 4: create_settings_screen();       break;
-            default: create_sensor_screen();        break;
+        
+        // Delete previous screen if it exists
+        if (current_screen) {
+            lv_obj_del(current_screen);
+            current_screen = nullptr;
         }
+
+        switch (new_index) {
+            case 0: current_screen = create_sensor_screen();         break;
+            case 1: current_screen = create_manual_control_screen(); break;
+            case 2: current_screen = create_warnings_screen();       break;
+            case 3: current_screen = create_history_screen();        break;
+            case 4: current_screen = create_settings_screen();       break;
+            default: current_screen = create_sensor_screen();        break;
+        }
+
+        if (current_screen) lv_scr_load(current_screen);
+
     }
     if (dropdown) {
       lv_dropdown_set_selected(dropdown, selected_index);
       lv_dropdown_close(dropdown);  // close the list to avoid re-opening during its event
     }
-    Serial.println("[GDL] screen change COMPLETE"); // Debug
+    lv_mem_monitor_t mon;
+    lv_mem_monitor(&mon);
+
+    Serial.print(F("[LVGL] Used: "));
+    Serial.print(mon.total_size - mon.free_size);
+    Serial.print(F(" bytes | Free: "));
+    Serial.print(mon.free_size);
+    Serial.print(F(" bytes | Largest Free: "));
+    Serial.print(mon.free_biggest_size);
+    Serial.print(F(" bytes | Fragmentation: "));
+    Serial.print(mon.frag_pct);
+    Serial.println(F("%"));
 }
 
 void create_header(lv_obj_t *parent, const char *title_txt) {

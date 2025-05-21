@@ -16,13 +16,24 @@ LV_IMG_DECLARE(GVSU_Logo);
 
 extern void global_input_event_cb(lv_event_t * e);
 static lv_obj_t *home_screen = nullptr;  // Make sure this is declared globally in the file
+static lv_obj_t *current_screen = nullptr;
 
 static void screen_touch_cb(lv_event_t * e) {
-  create_sensor_screen();  // Switch to sensor screen on any touch
-      if (home_screen) {
-    lv_obj_del(home_screen);
-    home_screen = nullptr;
+  // Delete home screen if it exists
+    if (home_screen) {
+        lv_obj_del(home_screen);
+        home_screen = nullptr;
     }
+
+    // Delete any existing screen
+    if (current_screen) {
+        lv_obj_del(current_screen);
+        current_screen = nullptr;
+    }
+
+    // Create and load the sensor screen
+    current_screen = create_sensor_screen();
+    lv_scr_load(current_screen);
 }
 
 void create_home_screen(void) {
