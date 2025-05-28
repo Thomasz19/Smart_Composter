@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file    main.cpp
- * @author  Thomas Zoldowski
+ * @author  Thomas Zoldowski, Jonathan Osburn
  * @date    May 10, 2025
  * @brief   Entry point for Smart Composter firmware.
  *
