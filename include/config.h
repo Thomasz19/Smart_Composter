@@ -35,14 +35,19 @@ here i define the color pallet of the LCD stuff
 // ========== GENERAL ==========
 #define SERIAL_BAUDRATE     115200
 
+// Sensor polling interval (milliseconds)
+#define SENSOR_UPDATE_INTERVAL_MS 1000
+
+// Inactivity timeout (milliseconds)
+#define INACTIVITY_TIMEOUT_MS 2400000  // 20 sec
 
 // ========== I2C MUX AND SENSOR ARRAY ==========
 #define I2C_MUX_ADDR        0x70  // TCA9548A default I2C address
 #define NUM_SENSOR_NODES    3     // Number of temperature/humidity sensor groups
 
 // I2C pins (typically hardware I2C for Arduino GIGA)
-//#define I2C_SDA             D20
-//#define I2C_SCL             D21
+#define I2C_SDA             D20
+#define I2C_SCL             D21
 
 
 // ========== ULTRASONIC SENSOR ==========

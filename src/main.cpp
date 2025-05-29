@@ -38,16 +38,17 @@
 #include "Arduino_H7_Video.h"
 #include "Arduino_GigaDisplayTouch.h"
 
+#include "logic/sensor_manager.h"
+
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
 
 // ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
-
+static unsigned long last_sensor_update = 0;
 
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
-const unsigned long gINACTIVITY_TIMEOUT = 2400000; // 20 sec
 
 // ================= WATCH DOG =================
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
@@ -56,6 +57,10 @@ mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
   Serial.println("Serial.println working");
+
+  // Initialize sensors
+  sensor_manager_init();
+
   Display.begin();
   TouchDetector.begin();
   
@@ -72,8 +77,14 @@ void setup() {
 void loop() {
   lv_timer_handler();
 
+  // Poll sensor data at defined interval
+  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
+    sensor_manager_update();
+    last_sensor_update = millis();
+  }
+
   // Inactivity timeout check
-  if (millis() - glast_input_time > gINACTIVITY_TIMEOUT) {
+  if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
     create_home_screen();
     glast_input_time = millis(); // Prevent repeated reloads
   }
