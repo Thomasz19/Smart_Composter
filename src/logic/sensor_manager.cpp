@@ -6,19 +6,12 @@
  ******************************************************************************/
 #include "logic/sensor_manager.h"
 #include "TCA9548.h"
-#include <Adafruit_AHTX0.h>
-#include <Wire.h>
-#include <Arduino.h>
+
 
 // Structure to hold sensor readings
 struct SensorData {
     float temperature;
     float humidity;
-};
-
-struct ConnectionStatus {
-    bool mux;           // true if TCA9548A acked
-    bool sensor[3];     // true for each AHT20 that acked
 };
 
 // I2C multiplexer on address 0x70

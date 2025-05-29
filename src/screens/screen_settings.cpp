@@ -342,6 +342,7 @@ void setup_ui_tab3(lv_obj_t *tab_3)
         lv_label_set_text(btn_lbl, buf);
         lv_obj_center(btn_lbl);
     }
+
 }
 
 static void config_time_btn_cb(lv_event_t *e) {

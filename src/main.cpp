@@ -34,6 +34,7 @@
 #include "screens/screen_home.h"
 #include "screens/screen_sensors.h"
 #include "screens/screen_warnings.h"
+#include "screens/screen_diagnostics.h"
 
 #include "Arduino_H7_Video.h"
 #include "Arduino_GigaDisplayTouch.h"
@@ -80,6 +81,7 @@ void loop() {
   // Poll sensor data at defined interval
   if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
     sensor_manager_update();
+    update_diagnostics_screen();
     last_sensor_update = millis();
   }
 

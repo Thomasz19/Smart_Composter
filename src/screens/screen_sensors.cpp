@@ -11,6 +11,7 @@
 #include "screens/screen_sensors.h"
 #include "screens/screen_warnings.h"
 #include "screens/screen_manual.h"  
+#include "screens/screen_diagnostics.h" 
 #include "ui_manager.h"
 
 // ================= extern prototype functions =================
@@ -171,6 +172,18 @@ lv_obj_t* create_sensor_screen(void) {
 
     // Create footer
     create_footer(sensor_screen);
+
+    // Diagnostics button bottom-left
+    lv_obj_t *btn_diag = lv_btn_create(sensor_screen);
+    lv_obj_set_size(btn_diag, 120, 60);
+    lv_obj_align(btn_diag, LV_ALIGN_BOTTOM_RIGHT, -10, -60);
+    lv_obj_add_event_cb(btn_diag, [](lv_event_t* e) {
+        LV_UNUSED(e);
+        lv_scr_load(create_diagnostics_screen());
+    }, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *lbl_diag = lv_label_create(btn_diag);
+    lv_label_set_text(lbl_diag, "Diagnostics");
+    lv_obj_center(lbl_diag);
 
     //update_sensor_values(); // Initial values
     return sensor_screen;
