@@ -17,11 +17,11 @@ struct SensorData {
 // I2C multiplexer on address 0x70
 static TCA9548 tca(0x70);
 // Array of AHT20 sensor objects
-static Adafruit_AHTX0 aht_sensors[3];
+static Adafruit_AHTX0 aht_sensors[6];
 // Array to store latest readings
-static SensorData sensor_data[3];
+static SensorData sensor_data[6];
 // Corresponding TCA9548 channels for each sensor
-static const uint8_t sensor_channels[3] = {0, 1, 2};
+static const uint8_t sensor_channels[6] = {0, 1, 2, 3, 4, 5};
 // AHT20 I2C address
 static const uint8_t AHT20_ADDRESS = 0x38;
 
@@ -35,7 +35,7 @@ void sensor_manager_init() {
         Serial.println("MULTIPLEXER DETECTED"); 
     }
     Serial.println("Initializing AHT20 sensors...");
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < 6; i++) {
         tca.selectChannel(sensor_channels[i]);
         if (!aht_sensors[i].begin()) {
             Serial.print("AHT20 #");
@@ -52,7 +52,7 @@ void sensor_manager_init() {
 }
 
 void sensor_manager_update() {
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < 6; i++) {
         tca.selectChannel(sensor_channels[i]);
         sensors_event_t humidity_event, temp_event;
         if (aht_sensors[i].getEvent(&humidity_event, &temp_event)) {
@@ -67,11 +67,11 @@ void sensor_manager_update() {
 }
 
 float sensor_manager_get_temperature(uint8_t idx) {
-    return (idx < 3) ? sensor_data[idx].temperature : NAN;
+    return (idx < 6) ? sensor_data[idx].temperature : NAN;
 }
 
 float sensor_manager_get_humidity(uint8_t idx) {
-    return (idx < 3) ? sensor_data[idx].humidity : NAN;
+    return (idx < 6) ? sensor_data[idx].humidity : NAN;
 }
 
 // Checks whether the mux and each sensor are present on the bus
@@ -83,7 +83,7 @@ ConnectionStatus sensor_manager_get_connection_status() {
     status.mux = (Wire.endTransmission() == 0);
 
     // Test each sensor behind the mux
-    for (uint8_t i = 0; i < 3; i++) {
+    for (uint8_t i = 0; i < 6; i++) {
         tca.selectChannel(sensor_channels[i]);
         Wire.beginTransmission(AHT20_ADDRESS);
         status.sensor[i] = (Wire.endTransmission() == 0);

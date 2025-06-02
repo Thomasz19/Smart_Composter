@@ -25,7 +25,7 @@ here i define the color pallet of the LCD stuff
 
 
 // ======= SIMULATION MODE =======
-#define SIMULATION_MODE    0   // Set to 1 to enable fake sensor data; 0 = real sensors
+#define SIMULATION_MODE    1   // Set to 1 to enable fake sensor data; 0 = real sensors
 
 // Sensor thresholds (adjust as needed)
 #define TEMP_GOOD_MIN     15.0
