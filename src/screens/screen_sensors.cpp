@@ -38,14 +38,14 @@ TempThresholds temp_thresholds = {15.0, 30.0, 35.0};
 /*
 functions
 */
-static lv_color_t get_temp_color(float temp) { // WARNING: not used yet
-    if (temp >= temp_thresholds.good_min && temp <= temp_thresholds.good_max)
-        return lv_color_hex(0x1ac41f); // green
-    else if (temp <= temp_thresholds.warn_max)
-        return lv_color_hex(0xc4691a);  // Orange
-    else
-        return lv_color_hex(0xc41a1a); // red
-}
+// static lv_color_t get_temp_color(float temp) { // WARNING: not used yet
+//     if (temp >= temp_thresholds.good_min && temp <= temp_thresholds.good_max)
+//         return lv_color_hex(0x1ac41f); // green
+//     else if (temp <= temp_thresholds.warn_max)
+//         return lv_color_hex(0xc4691a);  // Orange
+//     else
+//         return lv_color_hex(0xc41a1a); // red
+// }
 
 //sensor readings (replace with real sensor code)
 static void update_sensor_values() {
