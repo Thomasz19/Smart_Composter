@@ -13,6 +13,7 @@
 #include "screens/screen_manual.h"  
 #include "screens/screen_diagnostics.h" 
 #include "ui_manager.h"
+#include "logic/sensor_manager.h"
 
 // ================= extern prototype functions =================
 extern void global_input_event_cb(lv_event_t * e);
@@ -23,7 +24,6 @@ static lv_obj_t *label_temp[3];
 static lv_obj_t *label_hum[3];
 static lv_obj_t *label_o2;
 
-static unsigned long last_update = 0;
 static lv_obj_t *sensor_screen = NULL;
 
 // Threshold struct
@@ -51,16 +51,86 @@ static lv_color_t get_temp_color(float temp) { // WARNING: not used yet
 static void update_sensor_values() {
 #if SIMULATION_MODE
     for (int i = 0; i < 3; i++) {
-        float temp = 20.0 + random(-10, 10) * 0.1;
-        float hum = 40.0 + random(-10, 10) * 0.1;
-        lv_label_set_text_fmt(label_temp[i], "Temp: %.1f°C", temp);
-        lv_label_set_text_fmt(label_hum[i], "Hum: %.1f%%", hum);
-    }
+        // 1) Simulated temp/hum floats
+        float tempC = 20.0f + (random(-10, 11) * 0.1f);
+        float hum   = 40.0f + (random(-10, 11) * 0.1f);
 
-    float o2 = 20.9 + random(-5, 5) * 0.1;
-    lv_label_set_text_fmt(label_o2, "O₂ Level: %.1f%%", o2);
+        // 2) Convert to “tenths” integer
+        int32_t temp10 = (int32_t)roundf(tempC * 10.0f);
+        int32_t hum10  = (int32_t)roundf(hum   * 10.0f);
+
+        // 3) Split into whole and decimal digits
+        int32_t temp_whole   = temp10 / 10;             // e.g. 20
+        int32_t temp_decimal = abs(temp10 % 10);        // e.g. 3  → shows 20.3
+
+        int32_t hum_whole    = hum10  / 10;             // e.g. 40
+        int32_t hum_decimal  = abs(hum10  % 10);        // e.g. 7  → shows 40.7%
+
+        // 4) Format with LV_PRId32:
+        lv_label_set_text_fmt(
+        label_temp[i],
+        "%" LV_PRId32 ".%" LV_PRId32 "°F",
+        temp_whole, temp_decimal
+        );
+        lv_label_set_text_fmt(
+        label_hum[i],
+        "%" LV_PRId32 ".%" LV_PRId32 "%%",
+        hum_whole, hum_decimal
+        );
+    }
+    // O₂ example (if you want “O₂: xx.x%”)
+    float o2_sim       = 20.9f + (random(-5, 6) * 0.1f);
+    int32_t o2_tenths  = (int32_t)roundf(o2_sim * 10.0f);
+    int32_t o2_whole   = o2_tenths / 10;
+    int32_t o2_decimal = abs(o2_tenths % 10);
+    lv_label_set_text_fmt(
+    label_o2,
+    "%" LV_PRId32 ".%" LV_PRId32 "%%",
+    o2_whole, o2_decimal
+    );
 #else
-    // TODO: Read real sensors here
+    // tell sensor_manager to read the mux + AHT20s:
+sensor_manager_update();
+
+// Check which devices ACK’d on-bus:
+ConnectionStatus status = sensor_manager_get_connection_status();
+
+for (int i = 0; i < 3; i++) {
+    if (status.sensor[i]) {
+        // read temperature (°C) and convert to °F
+        float tempC = sensor_manager_get_temperature(i);
+        float tempF = tempC * 9.0f / 5.0f + 32.0f;
+        float hum   = sensor_manager_get_humidity(i);
+
+        // Convert tempF to “tenths” fixed-point:
+        int32_t temp10      = (int32_t)roundf(tempF * 10.0f);
+        int32_t temp_whole  = temp10 / 10;             // integer part
+        int32_t temp_decimal = abs(temp10 % 10);       // single decimal digit
+
+        // Convert hum to “tenths” fixed-point:
+        int32_t hum10       = (int32_t)roundf(hum * 10.0f);
+        int32_t hum_whole   = hum10 / 10;
+        int32_t hum_decimal = abs(hum10 % 10);
+
+        // Use LV_PRId32 to print “whole.decimal”:
+        lv_label_set_text_fmt(
+            label_temp[i],
+            "%" LV_PRId32 ".%" LV_PRId32 "°F",
+            temp_whole, temp_decimal
+        );
+        lv_label_set_text_fmt(
+            label_hum[i],
+            "%" LV_PRId32 ".%" LV_PRId32 "%%",
+            hum_whole, hum_decimal
+        );
+    } else {
+        lv_label_set_text(label_temp[i], "Error");
+        lv_label_set_text(label_hum[i],  "Error");
+    }
+}
+
+// If no O₂ sensor, just “Error” there:
+lv_label_set_text(label_o2, "Error");
 #endif
 }
 
@@ -86,7 +156,7 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_set_size(grid, lv_pct(100), 400);
     lv_obj_align(grid, LV_ALIGN_TOP_MID, 0, 65);
 
-    static lv_coord_t col_dsc[] = { 200, 240, 200, LV_GRID_TEMPLATE_LAST };
+    static lv_coord_t col_dsc[] = { 200, 320, 200, LV_GRID_TEMPLATE_LAST };
     static lv_coord_t row_dsc[] = { 60, 60, 60, 60, 60, LV_GRID_TEMPLATE_LAST };
 
     lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
@@ -95,7 +165,7 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_set_style_border_width(grid, 0, 0);
 
     // Create a horizontal line between header row and sensor rows
-    static lv_point_precise_t line_points[] = { {0, 0}, {700, 0} }; // Line from x=0 to x=320
+    static lv_point_precise_t line_points[] = { {0, 0}, {800, 0} }; // Line from x=0 to x=320
 
     lv_obj_t *line = lv_line_create(sensor_screen);
     lv_line_set_points(line, line_points, 2);
@@ -113,14 +183,14 @@ lv_obj_t* create_sensor_screen(void) {
     
     // Col 1 Lable
     lv_obj_t *label_col1 = lv_label_create(grid);
-    lv_label_set_text(label_col1, "Temp °F");
+    lv_label_set_text(label_col1, "Temp");
     lv_obj_set_grid_cell(label_col1, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_set_style_text_color(label_col1, lv_color_black(), 0);
     lv_obj_set_style_text_font(label_col1, &lv_font_montserrat_40, 0);
 
     // Col 2 Lable
     lv_obj_t *label_col2 = lv_label_create(grid);
-    lv_label_set_text(label_col2, "Humidity (%)");
+    lv_label_set_text(label_col2, "Humidity");
     lv_obj_set_grid_cell(label_col2, LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_set_style_text_color(label_col2, lv_color_black(), 0);
     lv_obj_set_style_text_font(label_col2, &lv_font_montserrat_40, 0);
@@ -185,7 +255,7 @@ lv_obj_t* create_sensor_screen(void) {
     lv_label_set_text(lbl_diag, "Diagnostics");
     lv_obj_center(lbl_diag);
 
-    //update_sensor_values(); // Initial values
+    update_sensor_values(); // Initial values
     return sensor_screen;
 }
 
@@ -194,8 +264,7 @@ bool is_sensor_screen_active() {
 }
 
 void update_sensor_screen() {
-    if (millis() - last_update > 1000) {
-        last_update = millis();
-        update_sensor_values();
-    }
+    update_sensor_values();
+    //Serial.println("Update data");
+
 }

@@ -29,7 +29,10 @@ void sensor_manager_init() {
     Wire.begin();
     if (tca.begin() == false)
     {
-    Serial.println("COULD NOT CONNECT TO MULTIPLEXER");
+        Serial.println("COULD NOT CONNECT TO MULTIPLEXER");
+    }
+    else{
+        Serial.println("MULTIPLEXER DETECTED"); 
     }
     Serial.println("Initializing AHT20 sensors...");
     for (uint8_t i = 0; i < 3; i++) {
