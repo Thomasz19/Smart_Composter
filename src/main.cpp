@@ -21,8 +21,9 @@
 *  - LVGL
 ******************************************************************************/
 
-// Ardunio 
+// Ardunio
 #include <Arduino.h>
+
 // Mbed OS
 #include <mbed.h>
 
@@ -34,18 +35,12 @@
 #include <string.h>
 #include <errno.h>
 
-
-
-#ifdef CORE_CM7
-  #include <WiFi.h>
-#endif
 // LittleFS (Mbed)
-// #include "QSPIFBlockDevice.h"
-// #include "MBRBlockDevice.h"
-// #include <LittleFileSystem.h>
+#include "QSPIFBlockDevice.h"
+#include "MBRBlockDevice.h"
+#include <LittleFileSystem.h>
 
-// Local Files 
-//#include "fault_handler.h"
+// Local Files
 #include "ui_manager.h"
 #include "config.h"
 
@@ -64,7 +59,7 @@
 #include "logic/sensor_manager.h"
 
 // Network
-//#include "logic/network_manager.h"
+#include "logic/network_manager.h"
 
 #include "settings_storage.h"
 
@@ -73,19 +68,21 @@ Arduino_GigaDisplayTouch  TouchDetector;
 
 // ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
-// void Init_LittleFS(void);
+void Init_LittleFS(void);
 
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
 static unsigned long last_sensor_update = 0;
 
 // Instantiate the raw flash driver on its default pins
-// QSPIFBlockDevice *root_ptr;
-// mbed::MBRBlockDevice *user_data_ptr;
-// mbed::LittleFileSystem *user_data_fs_ptr;
+QSPIFBlockDevice root(QSPI_SO0, QSPI_SO1, QSPI_SO2, QSPI_SO3,  QSPI_SCK, QSPI_CS, QSPIF_POLARITY_MODE_1, 40000000);
+mbed::MBRBlockDevice user_data(&root, 3);
+mbed::LittleFileSystem user_data_fs("user");
+
 
 // ================= WATCH DOG =================
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
+
 
 // ================= INIT SETUP =================
 void setup() {
@@ -93,37 +90,49 @@ void setup() {
   delay(1000);
   Serial.println("Serial.println working");
 
+  
+
   Display.begin();
   TouchDetector.begin();
 
+
+
   // Mount LittleFS (or reformat if running for the first time)
-  // Init_LittleFS();
+  Init_LittleFS();
 
-  // 2) Load or create defaults
-  //loadConfig();
+  // Connect Wifi
+  network_init();
 
-  // 3) Initialize your UI modules, including screen_manual’s static globals
-  //settings_init_from_config();
+  // Load or create defaults
+  loadConfig();
+
+  // Initialize your UI modules, including screen_manual’s static globals
+  settings_init_from_config();
 
   // Init Diagnostic sceeen
   create_diagnostics_screen();
+
   // Initialize sensors
   sensor_manager_init();
+
   // Init Screens
   create_sensor_screen();
   create_warnings_screen();
   create_home_screen();
 
   // Test Warning System
-  add_warning("Test");
+  // add_warning("Test");
 
   // Connect Wi-Fi and kick off the first upload
   //network_init_and_start();
+
+  //
 
   // Setup watchdog
   watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
 
 }
+
 
 // ================= MAIN LOOP =================
 void loop() {
@@ -136,8 +145,6 @@ void loop() {
     update_sensor_screen();
     last_sensor_update = millis();
   }
-
-
 
   // Inactivity timeout check
   if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
@@ -158,39 +165,36 @@ void global_input_event_cb(lv_event_t * e) {
 }
 
 // ================= LITTLEFS SETUP =================
-// void Init_LittleFS(void){
-//   root_ptr = new QSPIFBlockDevice(QSPI_SO0, QSPI_SO1, QSPI_SO2, QSPI_SO3, QSPI_SCK, QSPI_CS, QSPIF_POLARITY_MODE_1, 40000000);
-  
-//   // 1) Initialize root and the user_data partition
-//   int err = root_ptr->init();
-//   if (err) {
-//     Serial.println("root.init() failed");
-//     while (true) {}
-//   }
-//     user_data_ptr = new mbed::MBRBlockDevice(root_ptr, 3);
-//   if (user_data_ptr->init() != 0) {
-//     Serial.println("user_data.init() failed");
-//     while (true) {}
-//   }
-//   //  Serial.println("Mounting the filesystem…");
-//   user_data_fs_ptr = new mbed::LittleFileSystem("user");
-//   err = user_data_fs_ptr->mount(user_data_ptr);
-//   if (err) {
-//     Serial.println("Mount failed—reformatting…");
-//     int fmtErr = user_data_fs_ptr->reformat(user_data_ptr);
-//     if (fmtErr) {
-//       Serial.print("Reformat failed: ");
-//       Serial.print(strerror(-fmtErr));
-//       Serial.print(" (");
-//       Serial.print(fmtErr);
-//       Serial.println(")");
-//       while (true) {}
-//     }
-//     // Now that LittleFS has been formatted, mount again:
-//     if (user_data_fs_ptr->mount(user_data_ptr) != 0) {
-//       Serial.println("Mount after reformat still failed!");
-//       while (true) {}
-//     }
-//   }
-//   Serial.println("LittleFS mounted OK.");
-//  }
+void Init_LittleFS(void){
+  // 1) Initialize root and the user_data partition
+  int err = root.init();
+  if (err) {
+    Serial.println("root.init() failed");
+    while (true) {}
+  }
+  if (user_data.init() != 0) {
+    Serial.println("user_data.init() failed");
+    while (true) {}
+  }
+  //  Serial.println("Mounting the filesystem…");
+  err = user_data_fs.mount(&user_data);
+  if (err) {
+    Serial.println("Mount failed—reformatting…");
+    int fmtErr = user_data_fs.reformat(&user_data);
+    if (fmtErr) {
+      Serial.print("Reformat failed: ");
+      Serial.print(strerror(-fmtErr));
+      Serial.print(" (");
+      Serial.print(fmtErr);
+      Serial.println(")");
+      while (true) {}
+    }
+    // Now that LittleFS has been formatted, mount again:
+    if (user_data_fs.mount(&user_data) != 0) {
+      Serial.println("Mount after reformat still failed!");
+      while (true) {}
+    }
+  }
+  Serial.println("LittleFS mounted OK.");
+ }
+
