@@ -14,6 +14,7 @@
 #include <string.h>
 #include <Arduino.h>
 #include <time.h>
+#include "settings_storage.h"
 
 static lv_obj_t* settings_screen = nullptr;
 
@@ -158,7 +159,7 @@ void setup_ui_tab1(lv_obj_t *tab_1)
         lv_obj_center(lbl);
     }
     // Column titles
-    const char *cols[] = {"Sen.","Low","High","Low"};
+    const char *cols[] = {"Lev.","Low","High","Low"};
     for(int c = 0; c < 4; c++) {
         // Column header as plain label
         lv_obj_t *label_col = lv_label_create(grid);
@@ -275,7 +276,6 @@ void setup_ui_tab3(lv_obj_t *tab_3)
     lv_obj_clean(tab_3);
 
     const char *labels[] = {"Blower", "Pump"};
-    static int durations[] = {15, 10};  // default values in seconds
 
     Serial.println("[UI] Setting up Config Tab");
 
@@ -338,7 +338,13 @@ void setup_ui_tab3(lv_obj_t *tab_3)
 
         lv_obj_t *btn_lbl = lv_label_create(btn);
         char buf[16];
-        snprintf(buf, sizeof(buf), "%d sec", durations[i]);
+        if (i == 0) {
+            // Blower
+            snprintf(buf, sizeof(buf), "%d sec", blower_duration_sec);
+        } else {
+            // Pump
+            snprintf(buf, sizeof(buf), "%d sec", pump_duration_sec);
+        }
         lv_label_set_text(btn_lbl, buf);
         lv_obj_center(btn_lbl);
     }
@@ -485,9 +491,18 @@ static void modal_kb_event_cb(lv_event_t *e) {
             int sensor = modal_field_id / 3;
             int field = modal_field_id % 3;
             switch(field) {
-                case 0: sensor_thresh[sensor].temp_low  = new_val; break;
-                case 1: sensor_thresh[sensor].temp_high = new_val; break;
-                case 2: sensor_thresh[sensor].hum_low   = new_val; break;
+                case 0:
+                    sensor_thresh[sensor].temp_low  = new_val;
+                    config.temp_low[sensor]         = new_val;
+                    break;
+                case 1:
+                    sensor_thresh[sensor].temp_high = new_val;
+                    config.temp_high[sensor]        = new_val;
+                    break;
+                case 2:
+                    sensor_thresh[sensor].hum_low   = new_val;
+                    config.hum_low[sensor]          = new_val;
+                    break;
             }
 
             lv_obj_t * lbl = lv_obj_get_child((lv_obj_t *)modal_target_btn, 0);
@@ -499,6 +514,8 @@ static void modal_kb_event_cb(lv_event_t *e) {
             }
             lv_label_set_text(lbl, buf);
             lv_obj_center(lbl);
+            // **Persist the change immediately:**
+            saveConfig();
             break;
         }
         case MODAL_PIN_UNLOCK: {
@@ -530,7 +547,9 @@ static void modal_kb_event_cb(lv_event_t *e) {
         }
         case MODAL_PIN_CHANGE: {
             if (strlen(txt) == 4) {
-                strcpy(user_pin, txt);
+                strcpy(user_pin, txt);       // update UI global
+                strcpy(config.user_pin, txt); // copy into config
+                saveConfig();
             }
             break;
         }
@@ -539,10 +558,16 @@ static void modal_kb_event_cb(lv_event_t *e) {
             int seconds = atoi(txt);
             if (seconds <= 0) seconds = 1;  // sanity check
 
-            if (modal_mode == MODAL_BLOWER_TIME)
+            if (modal_mode == MODAL_BLOWER_TIME){
                 blower_duration_sec = seconds;
-            else
+                config.blower_duration_sec = seconds; // copy into config
+                saveConfig();
+            }
+            else{
                 pump_duration_sec = seconds;
+                config.pump_duration_sec = seconds;  // copy into config
+                saveConfig();
+            }
 
             // Update button label
             lv_obj_t *lbl = lv_obj_get_child(modal_target_btn, 0);
@@ -563,4 +588,23 @@ static void modal_kb_event_cb(lv_event_t *e) {
     modal_mode = MODAL_NONE;
     modal_field_id = -1;
     modal_target_btn = nullptr;
+}
+
+// Call this once in setup(), after loadConfig(), to copy values into the UI’s private globals.
+void settings_init_from_config() {
+    // Copy sensor thresholds:
+    for (int i = 0; i < 3; i++) {
+        sensor_thresh[i].temp_low  = config.temp_low[i];
+        sensor_thresh[i].temp_high = config.temp_high[i];
+        sensor_thresh[i].hum_low   = config.hum_low[i];
+    }
+
+    // Copy PIN and lock state:
+    strcpy(user_pin, config.user_pin);
+    pin_protection_enabled = config.pin_protection_enabled;
+    security_unlocked = false; // always start locked on reboot
+
+    // Copy blower/pump times:
+    blower_duration_sec = config.blower_duration_sec;
+    pump_duration_sec   = config.pump_duration_sec;
 }

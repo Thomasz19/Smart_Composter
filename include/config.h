@@ -25,7 +25,7 @@ here i define the color pallet of the LCD stuff
 
 
 // ======= SIMULATION MODE =======
-#define SIMULATION_MODE    1   // Set to 1 to enable fake sensor data; 0 = real sensors
+#define SIMULATION_MODE    0   // Set to 1 to enable fake sensor data; 0 = real sensors
 
 // Sensor thresholds (adjust as needed)
 #define TEMP_GOOD_MIN     15.0
@@ -46,8 +46,8 @@ here i define the color pallet of the LCD stuff
 #define NUM_SENSOR_NODES    3     // Number of temperature/humidity sensor groups
 
 // I2C pins (typically hardware I2C for Arduino GIGA)
-#define I2C_SDA             D20
-#define I2C_SCL             D21
+//#define I2C_SDA             D20
+//#define I2C_SCL             D21
 
 
 // ========== ULTRASONIC SENSOR ==========
