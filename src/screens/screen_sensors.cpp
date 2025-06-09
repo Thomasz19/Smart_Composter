@@ -25,7 +25,7 @@ static lv_obj_t *label_hum[6];
 static lv_obj_t *label_o2;
 
 static lv_obj_t *sensor_screen = NULL;
-
+int8_t o2Channel;
 // Threshold struct
 struct TempThresholds {
     float good_min;
@@ -129,8 +129,22 @@ static void update_sensor_values() {
         }
     }
 
-    // If no O₂ sensor, just “Error” there:
-    lv_label_set_text(label_o2, "Error");
+    if (status.o2) {
+        // read O₂ level (percent)
+        float o2          = sensor_manager_get_oxygen();
+        int32_t o210       = (int32_t)roundf(o2 * 10.0f);
+        int32_t o2_whole   = o210 / 10;
+        int32_t o2_decimal= abs(o210 % 10);
+
+        lv_label_set_text_fmt(
+            label_o2,
+            "%" LV_PRId32 ".%" LV_PRId32 "%%",
+            o2_whole, o2_decimal
+        );
+    } else {
+        lv_label_set_text(label_o2, "Error");
+    }
+    
 #endif
 }
 // =================== SCREEN DRIVER ===================

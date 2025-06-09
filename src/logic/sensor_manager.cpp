@@ -4,9 +4,18 @@
  * @date    May 19, 2025
  * @brief   Definitions for initializing and reading compost sensors.
  ******************************************************************************/
+
+ #include <DFRobot_OxygenSensor.h>
+
 #include "logic/sensor_manager.h"
 #include "TCA9548.h"
 
+#define Oxygen_IICAddress ADDRESS_3
+
+// Gravity O₂ sensor
+static DFRobot_OxygenSensor o2Sensor;
+static float oxygen_level = NAN;
+extern int8_t o2Channel;
 
 // Structure to hold sensor readings
 struct SensorData {
@@ -21,11 +30,12 @@ static Adafruit_AHTX0 aht_sensors[6];
 // Array to store latest readings
 static SensorData sensor_data[6];
 // Corresponding TCA9548 channels for each sensor
-static const uint8_t sensor_channels[6] = {0, 1, 2, 3, 4, 5};
+static const uint8_t sensor_channels[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 // AHT20 I2C address
 static const uint8_t AHT20_ADDRESS = 0x38;
 
 void sensor_manager_init() {
+    o2Channel = -1;
     Wire.begin();
     if (tca.begin() == false)
     {
@@ -35,7 +45,7 @@ void sensor_manager_init() {
         Serial.println("MULTIPLEXER DETECTED"); 
     }
     Serial.println("Initializing AHT20 sensors...");
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < 3; i++) {
         tca.selectChannel(sensor_channels[i]);
         if (!aht_sensors[i].begin()) {
             Serial.print("AHT20 #");
@@ -47,12 +57,30 @@ void sensor_manager_init() {
             Serial.println(" initialized.");
         }
     }
+    
+    // Init Oxygen Sensor
+    Serial.println("Initializing SEN0322 sensor...");
+    for (uint8_t i = 6; i < 8; i++) {
+        tca.selectChannel(sensor_channels[i]);
+        if (o2Sensor.begin(Oxygen_IICAddress) == 0) {
+            Serial.print("O₂ sensor found on channel ");
+            Serial.println(i);
+            o2Channel = i;
+            break;
+        }
+    }
+    if (o2Channel < 0) {
+        Serial.println("O₂ sensor not found on any channel!");
+    }
+
     // Deselect all channels to avoid bus conflicts
     tca.disableAllChannels();
 }
 
 void sensor_manager_update() {
-    for (uint8_t i = 0; i < 6; i++) {
+
+    // AHT Sensors
+    for (uint8_t i = 0; i < 3; i++) {
         tca.selectChannel(sensor_channels[i]);
         sensors_event_t humidity_event, temp_event;
         if (aht_sensors[i].getEvent(&humidity_event, &temp_event)) {
@@ -63,6 +91,14 @@ void sensor_manager_update() {
             sensor_data[i].temperature = NAN;
         }
     }
+
+    // O2 Sensor
+    if (o2Channel >= 0) {
+        tca.selectChannel(sensor_channels[o2Channel]);
+        oxygen_level = o2Sensor.getOxygenData(20);
+    }
+
+
     tca.disableAllChannels();
 }
 
@@ -74,6 +110,11 @@ float sensor_manager_get_humidity(uint8_t idx) {
     return (idx < 6) ? sensor_data[idx].humidity : NAN;
 }
 
+float sensor_manager_get_oxygen(void) {
+    return oxygen_level;
+}
+
+
 // Checks whether the mux and each sensor are present on the bus
 ConnectionStatus sensor_manager_get_connection_status() {
     ConnectionStatus status = {false, {false, false, false}};
@@ -83,11 +124,18 @@ ConnectionStatus sensor_manager_get_connection_status() {
     status.mux = (Wire.endTransmission() == 0);
 
     // Test each sensor behind the mux
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < 3; i++) {
         tca.selectChannel(sensor_channels[i]);
         Wire.beginTransmission(AHT20_ADDRESS);
         status.sensor[i] = (Wire.endTransmission() == 0);
     }
+
+    if (o2Channel >= 0) {
+        tca.selectChannel(sensor_channels[o2Channel]);
+        Wire.beginTransmission(Oxygen_IICAddress);    // define O2_I2C_ADDRESS (e.g. 0x??)
+        status.o2 = (Wire.endTransmission() == 0);
+    }
+
     tca.disableAllChannels();
 
     return status;

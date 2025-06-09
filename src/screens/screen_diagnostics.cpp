@@ -16,6 +16,7 @@
 static lv_obj_t* diag_screen = NULL;
 static lv_obj_t* label_sensor_status[6];
 static lv_obj_t* label_status_mux;
+static lv_obj_t* label_status_o2;
 
 lv_obj_t* create_diagnostics_screen(void) {
 
@@ -73,15 +74,15 @@ lv_obj_t* create_diagnostics_screen(void) {
 
     // Create 02 sensor row
     lv_obj_t *label_o2_title = lv_label_create(grid);
-    lv_label_set_text(label_o2_title, "Oxygen:");
+    lv_label_set_text(label_o2_title, "SEN0322:");
     lv_obj_set_grid_cell(label_o2_title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 7, 1);
     lv_obj_set_style_text_font(label_o2_title, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_o2_title, lv_color_hex(0x32c935), 0);
 
-    // label_status_mux = lv_label_create(grid);
-    // lv_obj_set_grid_cell(label_status_mux, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 7, 1);
-    // lv_obj_set_style_text_font(label_status_mux, &lv_font_montserrat_40, 0);
-    // lv_obj_set_style_text_color(label_status_mux, lv_color_hex(0x32c935), 0);
+    label_status_o2 = lv_label_create(grid);
+    lv_obj_set_grid_cell(label_status_o2, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 7, 1);
+    lv_obj_set_style_text_font(label_status_o2, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(label_status_o2, lv_color_hex(0x32c935), 0);
 
     return diag_screen;
 }
@@ -103,7 +104,7 @@ void update_diagnostics_screen(void) {
     }
 
     // Update sensor statuses
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < 3; i++) {
         if (status.sensor[i]) {
             lv_label_set_text(label_sensor_status[i], "Connected");
             lv_obj_set_style_text_color(label_sensor_status[i], lv_color_hex(0x32c935), LV_PART_MAIN);
@@ -111,5 +112,12 @@ void update_diagnostics_screen(void) {
             lv_label_set_text(label_sensor_status[i], "Disconnected");
             lv_obj_set_style_text_color(label_sensor_status[i], lv_color_hex(0xc41a1a), LV_PART_MAIN);
         }
+    }
+    if (status.o2) {
+        lv_label_set_text(label_status_o2, "Connected");
+        lv_obj_set_style_text_color(label_status_o2, lv_color_hex(0x32c935), LV_PART_MAIN);
+    } else {
+        lv_label_set_text(label_status_o2, "Disconnected");
+        lv_obj_set_style_text_color(label_status_o2, lv_color_hex(0xc41a1a), LV_PART_MAIN);
     }
 }
