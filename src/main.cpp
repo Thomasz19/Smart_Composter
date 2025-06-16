@@ -115,6 +115,8 @@ void setup() {
   // Initialize sensors
   sensor_manager_init();
 
+  Limit_Switch_Init();
+
   // Init Screens
   create_sensor_screen();
   create_warnings_screen();
@@ -143,6 +145,7 @@ void loop() {
     sensor_manager_update();
     update_diagnostics_screen();
     update_sensor_screen();
+    Limit_Switch_update();
     last_sensor_update = millis();
   }
 

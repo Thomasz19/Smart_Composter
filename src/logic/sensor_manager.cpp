@@ -12,6 +12,9 @@
 
 #define Oxygen_IICAddress ADDRESS_3
 
+constexpr uint8_t LIMIT_SWITCH_PINS[5] = { D0, D1, D2, D3, D4 };
+bool limit_switch_states[5] = {false, false, false, false, false};
+
 // Gravity O₂ sensor
 static DFRobot_OxygenSensor o2Sensor;
 static float oxygen_level = NAN;
@@ -139,4 +142,35 @@ ConnectionStatus sensor_manager_get_connection_status() {
     tca.disableAllChannels();
 
     return status;
+}
+
+
+void Limit_Switch_Init() {
+    for (uint8_t i = 0; i < 5; ++i) {
+        pinMode(LIMIT_SWITCH_PINS[i], INPUT);  // Externally pulled high
+    }
+}
+
+void Limit_Switch_update() {
+    for (uint8_t i = 0; i < 5; ++i) {
+        int pin_state = digitalRead(LIMIT_SWITCH_PINS[i]);
+        // LOW means switch is pressed (door closed)
+        limit_switch_states[i] = (pin_state == LOW);
+
+        if (limit_switch_states[i]) {
+            Serial.print("Limit Switch ");
+            Serial.print(i);
+            Serial.println(" is CLOSED (door shut)");
+        } else {
+            Serial.print("Limit Switch ");
+            Serial.print(i);
+            Serial.println(" is OPEN (door open)");
+        }
+    }
+}
+
+// Accessor function to get switch state
+bool Limit_Switch_isClosed(uint8_t index) {
+    if (index < 5) return limit_switch_states[index];
+    return false;
 }

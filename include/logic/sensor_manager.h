@@ -36,4 +36,12 @@ float sensor_manager_get_oxygen(void);
 // Check and return connection status for mux and sensors
 ConnectionStatus sensor_manager_get_connection_status(void);
 
+void Limit_Switch_Init();
+
+void Limit_Switch_update();
+
+bool Limit_Switch_isClosed(uint8_t index);
+
+extern bool limit_switch_states[5];
+
 #endif // LOGIC_SENSOR_MANAGER_H
