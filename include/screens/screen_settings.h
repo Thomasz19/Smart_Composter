@@ -23,4 +23,9 @@ void setup_ui_tab1(lv_obj_t *tab_1);
 
 void settings_init_from_config(void);
 
+bool check_pin();
+
+void logout_cb(lv_event_t *e);
+
+
 #endif /* SCREEN_MOTORS_H */

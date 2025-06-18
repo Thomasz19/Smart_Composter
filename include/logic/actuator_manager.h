@@ -9,6 +9,14 @@
 
 #include <cstdint>
 
+void LED_Init();
+
+void LED_On();
+
+void LED_Off();
+
+void LED_Update();
+
 /** Initialize all actuators (PWM for blowers, GPIO for valves, LEDs, etc.). */
 void actuator_manager_init();
 

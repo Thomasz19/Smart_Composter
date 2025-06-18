@@ -60,7 +60,7 @@
 
 // Network
 #include "logic/network_manager.h"
-
+#include "logic/actuator_manager.h"
 #include "settings_storage.h"
 
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
@@ -95,7 +95,7 @@ void setup() {
   Display.begin();
   TouchDetector.begin();
 
-
+  //lv_disp_set_rotation(NULL, LV_DISPLAY_ROTATION_90);
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
@@ -115,7 +115,9 @@ void setup() {
   // Initialize sensors
   sensor_manager_init();
 
+  // Init Pins
   Limit_Switch_Init();
+  LED_Init();
 
   // Init Screens
   create_sensor_screen();
@@ -146,6 +148,7 @@ void loop() {
     update_diagnostics_screen();
     update_sensor_screen();
     Limit_Switch_update();
+    LED_Update();
     last_sensor_update = millis();
   }
 

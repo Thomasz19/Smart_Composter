@@ -67,6 +67,11 @@ static void params_btn_cb(lv_event_t *e);
 static void modal_kb_event_cb(lv_event_t *e);
 static void config_time_btn_cb(lv_event_t *e);
 
+void logout_cb(lv_event_t *e) {
+    security_unlocked = false;
+    //ui_manager_load_login_screen();  // Optional: switch to login screen
+}
+
 lv_obj_t* create_settings_screen() {
     Serial.println("[UI] Creating Settings screen"); // Debug
 
@@ -607,4 +612,9 @@ void settings_init_from_config() {
     // Copy blower/pump times:
     blower_duration_sec = config.blower_duration_sec;
     pump_duration_sec   = config.pump_duration_sec;
+}
+
+
+bool check_pin() {
+    return security_unlocked;
 }

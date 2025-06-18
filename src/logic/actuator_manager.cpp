@@ -5,9 +5,44 @@
  * @brief   Definitions for controlling compost actuators.
  ******************************************************************************/
 #include "logic/actuator_manager.h"
+#include <Arduino.h>
+#include "screens/screen_settings.h"
+
+// LED pins
+const int LED_PINS[] = {28, 29, 30};
+
+
+
+// LED Functions
+void LED_Init() {
+    for (int i = 0; i < 3; i++) {
+        pinMode(LED_PINS[i], OUTPUT);
+        digitalWrite(LED_PINS[i], LOW); // Turn off initially
+    }
+}
+
+void LED_On() {
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(LED_PINS[i], HIGH);
+    }
+}
+
+void LED_Off() {
+    for (int i = 0; i < 3; i++) {
+        digitalWrite(LED_PINS[i], LOW);
+    }
+}
 
 void actuator_manager_init() {
-    // TODO: initialize PWM, GPIOs, etc.
+
+}
+
+void LED_Update() {
+
+    // check if security unlocked and activate buttons
+    if (check_pin()) LED_On();
+    else LED_Off();
+
 }
 
 void actuator_manager_set_blower_speed(uint8_t pct) {

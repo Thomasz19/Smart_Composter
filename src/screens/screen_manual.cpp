@@ -11,13 +11,15 @@
 #include "ui_manager.h"
 #include <string.h>
 #include <Arduino.h>
-
+#include "screens/screen_settings.h"
 
 static lv_obj_t* manual_screen = nullptr;
 
 
 // Forward for keypad callback
 //static void show_keypad_cb(lv_event_t * e);
+
+
 
 lv_obj_t* create_manual_control_screen() {
     manual_screen = lv_obj_create(NULL);
@@ -86,6 +88,20 @@ lv_obj_t* create_manual_control_screen() {
     lv_obj_center(act_lbl);
     lv_obj_set_style_text_font(act_lbl, &lv_font_montserrat_48, 0);
     
+
+    // ===== Logout Button =====
+    lv_obj_t *logout_btn = lv_btn_create(manual_screen);
+    lv_obj_set_size(logout_btn, 150, 60);
+    lv_obj_align(logout_btn, LV_ALIGN_TOP_RIGHT, -20, 10);
+    lv_obj_set_style_bg_color(logout_btn, lv_color_hex(0xff4d4d), 0); // red button
+    lv_obj_add_event_cb(logout_btn, logout_cb, LV_EVENT_CLICKED, NULL);
+
+    lv_obj_t *logout_lbl = lv_label_create(logout_btn);
+    lv_label_set_text(logout_lbl, "Logout");
+    lv_obj_center(logout_lbl);
+    lv_obj_set_style_text_font(logout_lbl, &lv_font_montserrat_40, 0);
+
+
     create_footer(manual_screen);
     return manual_screen;
 }
