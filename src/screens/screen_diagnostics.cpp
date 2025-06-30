@@ -13,7 +13,7 @@
 #include "ui_manager.h"
 
 // Screen and label handles
-static lv_obj_t* diag_screen = NULL;
+lv_obj_t* diag_screen = NULL;
 static lv_obj_t* label_sensor_status[6];
 static lv_obj_t* label_status_mux;
 static lv_obj_t* label_status_o2;

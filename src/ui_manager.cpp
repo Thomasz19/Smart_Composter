@@ -23,7 +23,7 @@ extern void global_input_event_cb(lv_event_t * e);
 static lv_style_t dropdown_list_style;
 
 static lv_obj_t *dropdown = nullptr;   // The global dropdown instance
-static int       selected_index = 0;  // default to Sensor Overview
+static int       selected_index=-1;  // default to Sensor Overview
 static lv_obj_t *current_screen = nullptr;
 
 /*
@@ -87,6 +87,7 @@ void create_global_dropdown(lv_obj_t *parent) {
     lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
 
     if (code == LV_EVENT_CLICKED) {
+        lv_dropdown_open(dropdown);
         lv_obj_t *list = lv_dropdown_get_list(target);
         if (list) {
             // Apply custom style only when the list is available
@@ -112,6 +113,7 @@ Function: Handles the selection of each item in the drop down menu
 void handle_screen_selection(const char *selected_label) {
     Serial.println("[GDL] changing Screens..."); // Debug
     int new_index = -1;
+    
 
     if      (!strcmp(selected_label, "Sensor Overview"))   new_index = 0;
     else if (!strcmp(selected_label, "Manual Control"))    new_index = 1;
@@ -119,17 +121,15 @@ void handle_screen_selection(const char *selected_label) {
     else if (!strcmp(selected_label, "History"))           new_index = 3;
     else if (!strcmp(selected_label, "Settings"))          new_index = 4;
     else new_index = 0;
+    Serial.print("[LVGL] ");
+    Serial.println(new_index);
+    if(new_index == selected_index) return; // no change
+
+    lv_obj_t* old_screen = current_screen;
 
     // if it’s changed, actually switch
     if (new_index >= 0 && new_index != selected_index) {
-        selected_index = new_index;
-        
-        // Delete previous screen if it exists
-        if (current_screen) {
-            lv_obj_del(current_screen);
-            current_screen = nullptr;
-        }
-
+       
         switch (new_index) {
             case 0: current_screen = create_sensor_screen();         break;
             case 1: current_screen = create_manual_control_screen(); break;
@@ -139,11 +139,18 @@ void handle_screen_selection(const char *selected_label) {
             default: current_screen = create_sensor_screen();        break;
         }
 
-        if (current_screen) lv_scr_load(current_screen);
+        if(current_screen) {
+            lv_scr_load(current_screen);
+            selected_index = new_index;
+        }
 
+        if(old_screen) {
+            lv_obj_del_async(old_screen);
+        }
     }
     if (dropdown) {
       lv_dropdown_set_selected(dropdown, selected_index);
+      Serial.println("[GDL] closing dropdown"); // Debug
       lv_dropdown_close(dropdown);  // close the list to avoid re-opening during its event
     }
     lv_mem_monitor_t mon;

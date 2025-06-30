@@ -44,4 +44,6 @@ bool Limit_Switch_isClosed(uint8_t index);
 
 extern bool limit_switch_states[5];
 
+void sonar_sensor_update();
+
 #endif // LOGIC_SENSOR_MANAGER_H

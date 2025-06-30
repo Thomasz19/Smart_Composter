@@ -5,8 +5,7 @@
  * @brief   Definitions for initializing and reading compost sensors.
  ******************************************************************************/
 
- #include <DFRobot_OxygenSensor.h>
-
+#include <DFRobot_OxygenSensor.h>
 #include "logic/sensor_manager.h"
 #include "TCA9548.h"
 
@@ -78,7 +77,11 @@ void sensor_manager_init() {
 
     // Deselect all channels to avoid bus conflicts
     tca.disableAllChannels();
+    
+
 }
+
+
 
 void sensor_manager_update() {
 

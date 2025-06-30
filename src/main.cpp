@@ -57,11 +57,17 @@
 
 // Sensors
 #include "logic/sensor_manager.h"
+#include <NewPing.h>
 
 // Network
 #include "logic/network_manager.h"
 #include "logic/actuator_manager.h"
 #include "settings_storage.h"
+
+// Screen Pointers
+extern lv_obj_t* diag_screen;
+extern lv_obj_t* sensor_screen;
+//extern lv_obj_t* limit_switch_screen;
 
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
@@ -69,7 +75,7 @@ Arduino_GigaDisplayTouch  TouchDetector;
 // ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
 void Init_LittleFS(void);
-
+void my_print(lv_log_level_t level, const char * buf);
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
 static unsigned long last_sensor_update = 0;
@@ -87,11 +93,10 @@ mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 // ================= INIT SETUP =================
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
+  Serial2.begin(9600);
+
   delay(1000);
-  Serial.println("Serial.println working");
-
-  
-
+  Serial.println("DEBUG: Serial.println working");
   Display.begin();
   TouchDetector.begin();
 
@@ -101,7 +106,7 @@ void setup() {
   Init_LittleFS();
 
   // Connect Wifi
-  network_init();
+  //network_init();
 
   // Load or create defaults
   loadConfig();
@@ -124,33 +129,40 @@ void setup() {
   create_warnings_screen();
   create_home_screen();
 
-  // Test Warning System
-  // add_warning("Test");
-
-  // Connect Wi-Fi and kick off the first upload
-  //network_init_and_start();
-
-  //
-
   // Setup watchdog
   watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
-
+  lv_log_register_print_cb(my_print);
 }
+
 
 
 // ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
-
   // Poll sensor data at defined interval
-  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
-    sensor_manager_update();
-    update_diagnostics_screen();
-    update_sensor_screen();
-    Limit_Switch_update();
-    LED_Update();
-    last_sensor_update = millis();
-  }
+//  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
+//     lv_obj_t* active = lv_scr_act();  // get the currently displayed screen
+
+//     // Diagnostics screen updates
+//     if (active == diag_screen) {
+//       sensor_manager_update();
+//       update_diagnostics_screen();
+//     }
+//     // Sensor screen updates
+//     else if (active == sensor_screen) {
+//       sensor_manager_update();
+//       update_sensor_screen();
+//       sonar_update_and_fill_bar();
+//     }
+//     // Limit-switch screen updates
+//     // else if (active == limit_switch_screen) {
+//     //   Limit_Switch_update();
+//     // }
+
+//     LED_Update();
+    
+//     last_sensor_update = millis();
+//   }
 
   // Inactivity timeout check
   if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
@@ -158,11 +170,9 @@ void loop() {
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
-  update_footer_status(FOOTER_OK);
+ // update_footer_status(FOOTER_OK);
   watchdog.kick();
   delay(5);
-
-  //network_update();
 }
 
 // ================= FUNCTIONS =================
@@ -204,3 +214,6 @@ void Init_LittleFS(void){
   Serial.println("LittleFS mounted OK.");
  }
 
+void my_print(lv_log_level_t level, const char * buf){
+  Serial.println(buf);
+}

@@ -22,4 +22,8 @@ void update_sensor_screen(void);
 
 bool is_sensor_screen_active(void);
 
+void sonar_update_and_fill_bar();
+
+bool read_sonar_packet(float &outInches);
+
 #endif /* SCREEN_SENSORS_H */
