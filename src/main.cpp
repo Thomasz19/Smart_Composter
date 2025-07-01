@@ -72,6 +72,9 @@ extern lv_obj_t* sensor_screen;
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
 
+
+
+
 // ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
 void Init_LittleFS(void);
@@ -97,16 +100,15 @@ void setup() {
 
   delay(1000);
   Serial.println("DEBUG: Serial.println working");
+  
   Display.begin();
   TouchDetector.begin();
+  lv_init();
 
-  //lv_disp_set_rotation(NULL, LV_DISPLAY_ROTATION_90);
+  lv_display_t *display = lv_display_create(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
-
-  // Connect Wifi
-  //network_init();
 
   // Load or create defaults
   loadConfig();
@@ -139,30 +141,30 @@ void setup() {
 // ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
-  // Poll sensor data at defined interval
-//  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
-//     lv_obj_t* active = lv_scr_act();  // get the currently displayed screen
+ // Poll sensor data at defined interval
+ if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
+    lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
 
-//     // Diagnostics screen updates
-//     if (active == diag_screen) {
-//       sensor_manager_update();
-//       update_diagnostics_screen();
-//     }
-//     // Sensor screen updates
-//     else if (active == sensor_screen) {
-//       sensor_manager_update();
-//       update_sensor_screen();
-//       sonar_update_and_fill_bar();
-//     }
-//     // Limit-switch screen updates
-//     // else if (active == limit_switch_screen) {
-//     //   Limit_Switch_update();
-//     // }
+    // Diagnostics screen updates
+    if (active == diag_screen) {
+      sensor_manager_update();
+      update_diagnostics_screen();
+    }
+    // Sensor screen updates
+    else if (active == sensor_screen) {
+      sensor_manager_update();
+      update_sensor_screen();
+      sonar_update_and_fill_bar();
+    }
+    // Limit-switch screen updates
+    // else if (active == limit_switch_screen) {
+    //   Limit_Switch_update();
+    // }
 
-//     LED_Update();
+    LED_Update();
     
-//     last_sensor_update = millis();
-//   }
+    last_sensor_update = millis();
+  }
 
   // Inactivity timeout check
   if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
@@ -172,7 +174,7 @@ void loop() {
 
  // update_footer_status(FOOTER_OK);
   watchdog.kick();
-  delay(5);
+  //delay(5);
 }
 
 // ================= FUNCTIONS =================

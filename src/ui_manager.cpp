@@ -32,6 +32,22 @@ Function: Drop down selection even handler
 static void dropdown_event_handler(lv_event_t * e) {
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * obj = lv_event_get_target_obj(e);
+
+    // Open drop down menu and Add styling
+    if (code == LV_EVENT_CLICKED) {
+        lv_dropdown_open(dropdown);
+        Serial.println("[GDL] opening dropdown"); // Debug
+        lv_obj_t *list = lv_dropdown_get_list(obj);
+        if (list) {
+            // Apply custom style only when the list is available
+            lv_obj_add_style(list, &dropdown_list_style, LV_PART_MAIN | LV_STATE_DEFAULT);
+            lv_obj_set_style_max_height(list, LV_SIZE_CONTENT, 0);
+            lv_obj_set_scroll_dir(list, LV_DIR_NONE);
+            lv_obj_set_height(list, 71 * 5);
+        }
+    }
+
+    // Change screen
     if(code == LV_EVENT_VALUE_CHANGED) {
         char buf[32];
         lv_dropdown_get_selected_str(obj, buf, sizeof(buf));
@@ -68,7 +84,6 @@ void create_global_dropdown(lv_obj_t *parent) {
     lv_dropdown_set_selected(dropdown, 0);
     lv_dropdown_set_text(dropdown, "");
 
-    lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_set_style_text_font(dropdown, &lv_font_montserrat_48, LV_PART_MAIN | LV_STATE_DEFAULT);
     
     // drop down listed items
@@ -79,32 +94,10 @@ void create_global_dropdown(lv_obj_t *parent) {
     lv_style_set_bg_color(&dropdown_list_style, lv_color_hex(0x42649F));
     lv_style_set_bg_grad_color(&dropdown_list_style, lv_color_hex(0xA3B7E4));
     lv_style_set_bg_grad_dir(&dropdown_list_style, LV_GRAD_DIR_HOR);
-    Serial.println("[GDL] opening dropdown"); // Debug
-   
-    // Attach event callback that will handle styling and selection
-    lv_obj_add_event_cb(dropdown, [](lv_event_t *e) {
-    lv_event_code_t code = lv_event_get_code(e);
-    lv_obj_t *target = (lv_obj_t *)lv_event_get_target(e);
-
-    if (code == LV_EVENT_CLICKED) {
-        lv_dropdown_open(dropdown);
-        lv_obj_t *list = lv_dropdown_get_list(target);
-        if (list) {
-            // Apply custom style only when the list is available
-            lv_obj_add_style(list, &dropdown_list_style, LV_PART_MAIN | LV_STATE_DEFAULT);
-            lv_obj_set_style_max_height(list, LV_SIZE_CONTENT, 0);
-            lv_obj_set_scroll_dir(list, LV_DIR_NONE);
-            lv_obj_set_height(list, 71 * 5);
-        }
-    }
-
-    if (code == LV_EVENT_VALUE_CHANGED) {
-        char buf[32];
-        lv_dropdown_get_selected_str(target, buf, sizeof(buf));
-        handle_screen_selection(buf);
-    }
-}, LV_EVENT_ALL, NULL);
-    Serial.println("[GDL] closing dropdown"); // Debug
+    
+    // Click on menu button handler
+    lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_CLICKED, NULL);
 }
 
 /*
@@ -123,12 +116,13 @@ void handle_screen_selection(const char *selected_label) {
     else new_index = 0;
     Serial.print("[LVGL] ");
     Serial.println(new_index);
+
     if(new_index == selected_index) return; // no change
 
     lv_obj_t* old_screen = current_screen;
 
     // if it’s changed, actually switch
-    if (new_index >= 0 && new_index != selected_index) {
+    if (new_index >= 0) {
        
         switch (new_index) {
             case 0: current_screen = create_sensor_screen();         break;
@@ -140,7 +134,7 @@ void handle_screen_selection(const char *selected_label) {
         }
 
         if(current_screen) {
-            lv_scr_load(current_screen);
+            lv_screen_load(current_screen);
             selected_index = new_index;
         }
 

@@ -29,6 +29,7 @@ static lv_style_t style_bar_ind;
 static uint8_t buffer_RTT[4];
 static int32_t distanceMm = 0;
 static float distanceInches = 0.0f;
+static uint8_t pct;
 // —————— Constants ——————
 static const uint32_t SONAR_INTERVAL_MS    = 1000;  // 1 Hz sampling
 static const uint8_t  AVG_WINDOW_SIZE      = 5;     // buffer 5 samples
@@ -253,15 +254,16 @@ lv_obj_t* create_sensor_screen(void) {
     lv_style_set_bg_color(&style_bar_ind, lv_palette_main(LV_PALETTE_RED));
     lv_style_set_bg_grad_color(&style_bar_ind, lv_palette_main(LV_PALETTE_GREEN));
     lv_style_set_bg_grad_dir(&style_bar_ind, LV_GRAD_DIR_VER);
-    //lv_style_set_radius(&style_bar_ind, 0);
+    lv_style_set_radius(&style_bar_ind, 0);
+
 
     bar_sonar = lv_bar_create(sensor_screen);
     lv_obj_add_style(bar_sonar, &style_bar_ind, LV_PART_INDICATOR);
-    lv_obj_set_size(bar_sonar, 20, 200);
-    lv_obj_align(bar_sonar, LV_ALIGN_RIGHT_MID, -75, 0);
+    lv_obj_set_size(bar_sonar, 40, 300);
+    lv_obj_align(bar_sonar, LV_ALIGN_RIGHT_MID, -30, 10);
     lv_bar_set_range(bar_sonar, 0, 100);
     lv_bar_set_value(bar_sonar, 50, LV_ANIM_OFF);
-
+    lv_obj_set_style_radius(bar_sonar, 0, LV_PART_MAIN);
     // Create footer
     create_footer(sensor_screen);
 
@@ -278,6 +280,7 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_center(lbl_diag);
 
     update_sensor_values(); // Initial values
+    lv_bar_set_value(bar_sonar, pct, LV_ANIM_ON);
     return sensor_screen;
 }
 
@@ -320,7 +323,7 @@ void sonar_update_and_fill_bar() {
     // Compute % full
     float levelIn = COMPOSTER_HEIGHT_IN - avgIn;
     levelIn = constrain(levelIn, 0, (float)COMPOSTER_HEIGHT_IN);
-    uint8_t pct = (uint8_t)roundf((levelIn/COMPOSTER_HEIGHT_IN)*100.0f);
+    pct = (uint8_t)roundf((levelIn/COMPOSTER_HEIGHT_IN)*100.0f);
     Serial.println("Pct: ");
     Serial.println(pct);
 
