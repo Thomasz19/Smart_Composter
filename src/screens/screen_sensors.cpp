@@ -20,27 +20,11 @@ extern void global_input_event_cb(lv_event_t * e);
 
 // ================= Global Variables =================
 // Label handles for live updates
-static lv_obj_t *label_temp[6];
-static lv_obj_t *label_hum[6];
+static lv_obj_t *label_temp[3];
+static lv_obj_t *label_hum[3];
 static lv_obj_t *label_o2;
 lv_obj_t *bar_sonar;
 static lv_style_t style_bar_ind;
-// SONAR UART buffer (SEN0208 protocol)
-static uint8_t buffer_RTT[4];
-static int32_t distanceMm = 0;
-static float distanceInches = 0.0f;
-static uint8_t pct;
-// —————— Constants ——————
-static const uint32_t SONAR_INTERVAL_MS    = 1000;  // 1 Hz sampling
-static const uint8_t  AVG_WINDOW_SIZE      = 5;     // buffer 5 samples
-static const uint8_t  OUTLIER_THRESHOLD_IN = 5;     // ignore >5 in jumps
-static const uint8_t  COMPOSTER_HEIGHT_IN  = 44;    // total height in inches
-
-// —————— Sonar buffering ——————
-static unsigned int sonarBuf[AVG_WINDOW_SIZE];
-static uint8_t      bufIdx          = 0;
-static float        lastValidIn     = 0.0f;
-
 
 lv_obj_t *sensor_screen = nullptr;
 
@@ -280,7 +264,6 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_center(lbl_diag);
 
     update_sensor_values(); // Initial values
-    lv_bar_set_value(bar_sonar, pct, LV_ANIM_ON);
     return sensor_screen;
 }
 
@@ -293,75 +276,4 @@ void update_sensor_screen() {
    
     //Serial.println("Update data");
 
-}
-
-
-/**
- * @brief  Called once per loop(); reads UART1 at 1 Hz, buffers + rejects outliers,
- *         every 5 samples computes avg distance → percent full → updates bar.
- */
-void sonar_update_and_fill_bar() {
-    float inches;
-    if (!read_sonar_packet(inches)) return;
-    Serial.print("Sonar (raw mm): ");
-    Serial.println((int)(inches * 25.4));  // avoids float
-    // Outlier rejection
-    if (bufIdx==0) lastValidIn = inches;
-    if (fabs(inches - lastValidIn) > OUTLIER_THRESHOLD_IN) return;
-    lastValidIn = inches;
-    Serial.println("made it 1");
-    // Buffer
-    sonarBuf[bufIdx++] = inches;
-    if (bufIdx < AVG_WINDOW_SIZE) return;
-    bufIdx = 0;
-    Serial.println("made it 2");
-    // Average
-    float sum=0;
-    for(int i=0;i<AVG_WINDOW_SIZE;i++) sum += sonarBuf[i];
-    float avgIn = sum/AVG_WINDOW_SIZE;
-    //Serial.println(avgIn);
-    // Compute % full
-    float levelIn = COMPOSTER_HEIGHT_IN - avgIn;
-    levelIn = constrain(levelIn, 0, (float)COMPOSTER_HEIGHT_IN);
-    pct = (uint8_t)roundf((levelIn/COMPOSTER_HEIGHT_IN)*100.0f);
-    Serial.println("Pct: ");
-    Serial.println(pct);
-
-    // Update LVGL bar
-    if (!bar_sonar) {
-        Serial.println("Error: bar_sonar is NULL!");
-        return;
-    }
-    if (lv_obj_is_valid(bar_sonar)) {
-        lv_bar_set_value(bar_sonar, pct, LV_ANIM_ON);
-        //lv_obj_invalidate(bar_sonar);
-        Serial.println("updated bar");
-    }else{
-        Serial.println("Not valid bar :(");
-    }
-    
-}
-
-/**
- * @brief  Read raw sonar packet from Serial2, decode to inches.
- *         Uses SEN0208 header-CRC protocol.
- * @return true if a valid reading was obtained.
- */
-bool read_sonar_packet(float &outInches) {
-    // Need 4 bytes: header, high, low, checksum
-    if (Serial2.available() < 4) return false;
-    // Check header
-    if (Serial2.peek() != 0xFF) {
-        Serial2.read();
-        return false;
-    }
-    // Read packet
-    for (int i = 0; i < 4; ++i) buffer_RTT[i] = Serial2.read();
-    uint8_t cs = buffer_RTT[0] + buffer_RTT[1] + buffer_RTT[2];
-    if (buffer_RTT[3] != cs) return false;
-    // Build mm, convert to inches
-    distanceMm = (buffer_RTT[1] << 8) | buffer_RTT[2];
-    distanceInches = distanceMm / 25.4f;
-    outInches = distanceInches;
-    return true;
 }

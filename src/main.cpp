@@ -72,9 +72,6 @@ extern lv_obj_t* sensor_screen;
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
 
-
-
-
 // ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
 void Init_LittleFS(void);
@@ -104,8 +101,6 @@ void setup() {
   Display.begin();
   TouchDetector.begin();
   lv_init();
-
-  lv_display_t *display = lv_display_create(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
@@ -141,8 +136,8 @@ void setup() {
 // ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
- // Poll sensor data at defined interval
- if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
+  // Poll sensor data at defined interval
+  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
     lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
 
     // Diagnostics screen updates
@@ -154,7 +149,7 @@ void loop() {
     else if (active == sensor_screen) {
       sensor_manager_update();
       update_sensor_screen();
-      sonar_update_and_fill_bar();
+     // sonar_update_and_fill_bar();
     }
     // Limit-switch screen updates
     // else if (active == limit_switch_screen) {
