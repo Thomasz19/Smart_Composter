@@ -26,7 +26,7 @@ lv_obj_t* create_manual_control_screen() {
     
 
     // Debug
-    //Serial.println("Create manual screen");
+    Serial.println("Create manual screen");
 
     // Background color 
     lv_obj_set_style_bg_color(manual_screen, lv_color_hex(0xc0c9d9), LV_PART_MAIN);

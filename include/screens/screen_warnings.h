@@ -20,8 +20,17 @@ enum FooterStatus {
     FOOTER_WARNING
 };
 
+// Possible warnings bitmask
+enum WarningMask {
+    WARN_NONE          = 0,
+    WARN_FRONT_DOOR    = 1 << 0,
+    WARN_BACK_DOOR     = 1 << 1,
+    WARN_LOADING_DOOR  = 1 << 2,
+    WARN_HIGH_TEMP     = 1 << 3,
+};
+
 void create_footer(lv_obj_t *parent);
-void update_footer_status(FooterStatus status);
+void update_footer_status(uint32_t warning_mask);
 
 /**
  * Create & show the Warnings screen.

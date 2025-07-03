@@ -15,8 +15,9 @@
 // Structure representing I2C connection status of the mux and sensors
 typedef struct {
     bool mux;           // true if TCA9548A acknowledged
-    bool sensor[6];     // true for each AHT20 that acknowledged
+    bool sensor[3];     // true for each AHT20 that acknowledged
     bool o2;
+    bool vl53[2]; // true for each VL53L1X that acknowledged
 } ConnectionStatus;
 
 /** Initialize all compost sensors (I²C, ADC channels, etc.). */
@@ -43,5 +44,9 @@ void Limit_Switch_update();
 bool Limit_Switch_isClosed(uint8_t index);
 
 extern bool limit_switch_states[5];
+
+void sonar_sensor_update();
+
+float sensor_manager_get_tof_distance(uint8_t idx);
 
 #endif // LOGIC_SENSOR_MANAGER_H

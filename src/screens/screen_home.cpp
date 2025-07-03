@@ -10,34 +10,20 @@
 #include "screens/screen_sensors.h"
 #include <lvgl.h>
 #include "GVSU_Logo.h"
-
+#include "ui_manager.h"
 
 LV_IMG_DECLARE(GVSU_Logo);
 
 extern void global_input_event_cb(lv_event_t * e);
-static lv_obj_t *home_screen = nullptr;  // Make sure this is declared globally in the file
-static lv_obj_t *current_screen = nullptr;
 
 static void screen_touch_cb(lv_event_t * e) {
-  // Delete home screen if it exists
-    if (home_screen) {
-        lv_obj_del(home_screen);
-        home_screen = nullptr;
-    }
-
-    // Delete any existing screen
-    if (current_screen) {
-        lv_obj_del(current_screen);
-        current_screen = nullptr;
-    }
-
-    // Create and load the sensor screen
-    current_screen = create_sensor_screen();
-    lv_scr_load(current_screen);
+  Serial.println("▶ screen_touch_cb fired");
+  handle_screen_selection("Sensor Overview");
+  Serial.println("◀ screen_touch_cb returned");
 }
 
 void create_home_screen(void) {
-    home_screen = lv_obj_create(NULL);
+    lv_obj_t *home_screen = lv_obj_create(NULL);
     lv_scr_load(home_screen);
     
     // Set black background

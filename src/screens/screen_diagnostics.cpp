@@ -13,13 +13,14 @@
 #include "ui_manager.h"
 
 // Screen and label handles
-static lv_obj_t* diag_screen = NULL;
-static lv_obj_t* label_sensor_status[6];
+lv_obj_t* diag_screen = NULL;
+static lv_obj_t* label_sensor_status[3];
 static lv_obj_t* label_status_mux;
 static lv_obj_t* label_status_o2;
+static lv_obj_t* label_tof_status[2];  // VL53L1X sensors
 
 lv_obj_t* create_diagnostics_screen(void) {
-
+    Serial.println("Creating Diagnostics Screen...");
     diag_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(diag_screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(diag_screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -30,11 +31,11 @@ lv_obj_t* create_diagnostics_screen(void) {
 
     // ===== Sensor Data Grid =====
     lv_obj_t *grid = lv_obj_create(diag_screen);
-    lv_obj_set_size(grid, lv_pct(100), 384);
+    lv_obj_set_size(grid, lv_pct(100), lv_pct(100));
     lv_obj_align(grid, LV_ALIGN_TOP_MID, 0, 80);
 
     static lv_coord_t col_dsc[] = { 200, 400, LV_GRID_TEMPLATE_LAST };
-    static lv_coord_t row_dsc[] = { 48, 48, 48, 48, 48, 48, 48, 48, LV_GRID_TEMPLATE_LAST };
+    static lv_coord_t row_dsc[] = { 48, 48, 48, 48, 48, 48, 48, LV_GRID_TEMPLATE_LAST };
 
     lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
     lv_obj_set_layout(grid, LV_LAYOUT_GRID);
@@ -57,9 +58,9 @@ lv_obj_t* create_diagnostics_screen(void) {
     lv_obj_set_grid_cell(label_status_mux, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_set_style_text_font(label_status_mux, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_status_mux, lv_color_hex(0x32c935), 0);
-
+    Serial.println("Creating Diagnostics Screen: Mux row created");
     // Create a row for each aht20 sensor
-    for (uint8_t i = 0; i < 6; i++) {
+    for (uint8_t i = 0; i < 3; i++) {
         lv_obj_t *row = lv_label_create(grid);
         lv_label_set_text_fmt(row, "AHT20 #%d:", i + 1);
         lv_obj_set_grid_cell(row, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, i+1, 1);
@@ -71,19 +72,33 @@ lv_obj_t* create_diagnostics_screen(void) {
         lv_obj_set_style_text_font(label_sensor_status[i], &lv_font_montserrat_40, 0);
         lv_obj_set_style_text_color(label_sensor_status[i], lv_color_hex(0x32c935), 0);
     }
-
+    Serial.println("Creating Diagnostics Screen: AHT20 sensor rows created");
     // Create 02 sensor row
     lv_obj_t *label_o2_title = lv_label_create(grid);
     lv_label_set_text(label_o2_title, "SEN0322:");
-    lv_obj_set_grid_cell(label_o2_title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 7, 1);
+    lv_obj_set_grid_cell(label_o2_title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 6, 1);
     lv_obj_set_style_text_font(label_o2_title, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_o2_title, lv_color_hex(0x32c935), 0);
 
     label_status_o2 = lv_label_create(grid);
-    lv_obj_set_grid_cell(label_status_o2, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 7, 1);
+    lv_obj_set_grid_cell(label_status_o2, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 6, 1);
     lv_obj_set_style_text_font(label_status_o2, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_status_o2, lv_color_hex(0x32c935), 0);
+    Serial.println("Creating Diagnostics Screen: O2 sensor row created");
+    // Create VL53L1X sensor rows (ports 4 and 5 on I2C Mux)
+    for (uint8_t j = 0; j < 2; j++) {
+        lv_obj_t *label_tof_title = lv_label_create(grid);
+        lv_label_set_text_fmt(label_tof_title, "VL53L1X #%d:", j + 1);
+        lv_obj_set_grid_cell(label_tof_title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 4 + j, 1);
+        lv_obj_set_style_text_font(label_tof_title, &lv_font_montserrat_40, 0);
+        lv_obj_set_style_text_color(label_tof_title, lv_color_hex(0x32c935), 0);
 
+        label_tof_status[j] = lv_label_create(grid);
+        lv_obj_set_grid_cell(label_tof_status[j], LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4 + j, 1);
+        lv_obj_set_style_text_font(label_tof_status[j], &lv_font_montserrat_40, 0);
+        lv_obj_set_style_text_color(label_tof_status[j], lv_color_hex(0x32c935), 0);
+    }
+    Serial.println("Creating Diagnostics Screen: VL53L1X sensor rows created");
     return diag_screen;
 }
 
@@ -119,5 +134,15 @@ void update_diagnostics_screen(void) {
     } else {
         lv_label_set_text(label_status_o2, "Disconnected");
         lv_obj_set_style_text_color(label_status_o2, lv_color_hex(0xc41a1a), LV_PART_MAIN);
+    }
+    // Update VL53L1X sensor statuses
+    for (uint8_t j = 0; j < 2; j++) {
+        if (status.vl53[j]) {
+            lv_label_set_text(label_tof_status[j], "Connected");
+            lv_obj_set_style_text_color(label_tof_status[j], lv_color_hex(0x32c935), LV_PART_MAIN);
+        } else {
+            lv_label_set_text(label_tof_status[j], "Disconnected");
+            lv_obj_set_style_text_color(label_tof_status[j], lv_color_hex(0xc41a1a), LV_PART_MAIN);
+        }
     }
 }

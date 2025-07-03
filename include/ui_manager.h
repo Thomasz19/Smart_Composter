@@ -19,6 +19,7 @@
 #include <lvgl.h>
 
 void create_global_dropdown(lv_obj_t *parent);
+
 void handle_screen_selection(const char *selected_label);
 
 /**

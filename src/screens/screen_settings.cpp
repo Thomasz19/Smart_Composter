@@ -366,7 +366,7 @@ static void config_time_btn_cb(lv_event_t *e) {
 
 // Unlock overlay tapped
 static void lock_overlay_cb(lv_event_t *e) {
-    //lv_timer(10);
+    Serial.println("[UI] Lock overlay tapped"); // Debug
     modal_mode = MODAL_PIN_UNLOCK;
     show_modal_keypad(false);
 }
@@ -463,8 +463,10 @@ void show_modal_keypad(bool for_change) {
     lv_obj_set_style_text_font(close_lbl, &lv_font_montserrat_48, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     lv_obj_add_event_cb(close_btn, [](lv_event_t *e) {
-        lv_obj_del(modal_bg);
-        modal_bg = modal_kb = modal_ta = modal_target_btn = nullptr;
+        if(modal_bg) {
+            lv_obj_del(modal_bg);
+            modal_bg = modal_kb = modal_ta = nullptr;
+        }
         modal_field_id = -1;
     }, LV_EVENT_CLICKED, NULL);
 

@@ -9,7 +9,7 @@
 #include "screens/screen_settings.h"
 
 // LED pins
-const int LED_PINS[] = {28, 29, 30};
+const int LED_PINS[] = {28, 30, 32};
 
 
 
@@ -18,6 +18,7 @@ void LED_Init() {
     for (int i = 0; i < 3; i++) {
         pinMode(LED_PINS[i], OUTPUT);
         digitalWrite(LED_PINS[i], LOW); // Turn off initially
+        //pinMode(LED_PINS[i], INPUT_PULLDOWN);
     }
 }
 

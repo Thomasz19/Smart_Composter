@@ -63,13 +63,18 @@
 #include "logic/actuator_manager.h"
 #include "settings_storage.h"
 
+// Screen Pointers
+extern lv_obj_t* diag_screen;
+extern lv_obj_t* sensor_screen;
+//extern lv_obj_t* limit_switch_screen;
+
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
 
 // ================= Prototype Functions =================
 void global_input_event_cb(lv_event_t * e);
 void Init_LittleFS(void);
-
+void my_print(lv_log_level_t level, const char * buf);
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
 static unsigned long last_sensor_update = 0;
@@ -87,82 +92,87 @@ mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 // ================= INIT SETUP =================
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
-  delay(1000);
-  Serial.println("Serial.println working");
+  //Serial2.begin(9600);
 
+  delay(2000);
+  Serial.println("DEBUG: Serial.println working");
   
-
   Display.begin();
   TouchDetector.begin();
-
-  //lv_disp_set_rotation(NULL, LV_DISPLAY_ROTATION_90);
+  //lv_init();
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
-
-  // Connect Wifi
-  network_init();
 
   // Load or create defaults
   loadConfig();
 
   // Initialize your UI modules, including screen_manual’s static globals
   settings_init_from_config();
-
+  Serial.println("5...................");
   // Init Diagnostic sceeen
   create_diagnostics_screen();
-
+  Serial.println("10...................");
   // Initialize sensors
   sensor_manager_init();
-
+  Serial.println("20...................");
   // Init Pins
   Limit_Switch_Init();
   LED_Init();
 
   // Init Screens
+  Serial.println("30...................");
   create_sensor_screen();
+  Serial.println("40...................");;
   create_warnings_screen();
+  Serial.println("50...................");
+  // Create the home screen
   create_home_screen();
-
-  // Test Warning System
-  // add_warning("Test");
-
-  // Connect Wi-Fi and kick off the first upload
-  //network_init_and_start();
-
-  //
-
+  Serial.println("60...................");
   // Setup watchdog
   watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
-
+  lv_log_register_print_cb(my_print);
+  
+  update_footer_status(FOOTER_OK);
 }
+
 
 
 // ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
-
   // Poll sensor data at defined interval
   if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
-    sensor_manager_update();
-    update_diagnostics_screen();
-    update_sensor_screen();
+    lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
+
+    // Diagnostics screen updates
+    if (active == diag_screen) {
+      sensor_manager_update();
+      update_diagnostics_screen();
+    }
+    // Sensor screen updates
+    else if (active == sensor_screen) {
+      sensor_manager_update();
+      update_sensor_screen();
+    }
+  
     Limit_Switch_update();
+
+
     LED_Update();
+    
     last_sensor_update = millis();
   }
 
   // Inactivity timeout check
   if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
-    create_home_screen();
+    handle_screen_selection("Home"); // Go back to home screen after timeout
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
-  update_footer_status(FOOTER_OK);
+  
   watchdog.kick();
-  delay(5);
-
-  //network_update();
+  //delay(5);
 }
 
 // ================= FUNCTIONS =================
@@ -204,3 +214,6 @@ void Init_LittleFS(void){
   Serial.println("LittleFS mounted OK.");
  }
 
+void my_print(lv_log_level_t level, const char * buf){
+  Serial.println(buf);
+}
