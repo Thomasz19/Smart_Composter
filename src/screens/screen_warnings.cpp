@@ -14,13 +14,13 @@
 
 static void warnings_table_draw_cb(lv_event_t * e);
 
-// footer variables
+// Footer variables
 static lv_obj_t *footer_bar = nullptr;
 static lv_obj_t *footer_label = nullptr;
 static bool footer_flash_state = false;
-static unsigned long last_footer_flash = 0;
-static FooterStatus last_status = FOOTER_OK;
-static const unsigned long FOOTER_FLASH_INTERVAL = 500;
+static uint32_t last_footer_flash = 0;
+static uint32_t prev_warning_mask = -1;
+static const uint32_t FOOTER_FLASH_INTERVAL = 500;
 
 // warning screen
 // Max number of warnings we keep in memory
@@ -123,7 +123,7 @@ lv_obj_t* create_warnings_screen() {
     lv_obj_align   (warnings_table, LV_ALIGN_TOP_MID, 0, HEADER_H);
     lv_obj_set_style_text_font(warnings_table, &lv_font_montserrat_40, 0);
 
-    
+    // Style the table
     lv_obj_add_event_cb(warnings_table, warnings_table_draw_cb, LV_EVENT_DRAW_TASK_ADDED, NULL);
     lv_obj_add_flag(warnings_table, LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS);
     lv_obj_set_scroll_dir(warnings_table, LV_DIR_VER);
@@ -132,6 +132,24 @@ lv_obj_t* create_warnings_screen() {
     return warnings_screen;
 }
 
+static void format_warnings(uint32_t mask, char *buf, size_t buf_sz) {
+    if(mask == WARN_NONE) {
+        snprintf(buf, buf_sz, "ALL SYSTEMS NOMINAL");
+        lv_obj_set_style_text_color(footer_label, lv_color_hex(0x094211), 0);
+        return;
+    }
+    buf[0] = '\0';
+    bool first = true;
+    auto append = [&](const char* msg) {
+        if(!first) strncat(buf, ", ", buf_sz - strlen(buf) - 1);
+        strncat(buf, msg, buf_sz - strlen(buf) - 1);
+        first = false;
+    };
+    if(mask & WARN_FRONT_DOOR)   append("Front unloading door open");
+    if(mask & WARN_BACK_DOOR)    append("Back unloading door open");
+    if(mask & WARN_LOADING_DOOR) append("Loading door open");
+    if(mask & WARN_HIGH_TEMP)    append("High Temp");
+}
 
 void add_warning(const char *description) {
     if(!warnings_table) return;
@@ -168,41 +186,55 @@ void add_warning(const char *description) {
     }
 }
 
+// Function to create the footer bar at the bottom of the screen
+// It displays the current system status and flashes red on warnings
 void create_footer(lv_obj_t *parent) {
     footer_bar = lv_obj_create(parent);
     lv_obj_set_size(footer_bar, lv_pct(100), 60);
     lv_obj_align(footer_bar, LV_ALIGN_BOTTOM_MID, 0, 0);
-    lv_obj_set_style_bg_color(footer_bar, lv_color_hex(0x1ac41f), 0);
+    lv_obj_set_style_bg_color(footer_bar, lv_color_hex(0x1AC41F), 0);
     lv_obj_set_style_bg_opa(footer_bar, LV_OPA_COVER, 0);
     lv_obj_clear_flag(footer_bar, LV_OBJ_FLAG_SCROLLABLE);
 
     footer_label = lv_label_create(footer_bar);
+    lv_label_set_long_mode(footer_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_width(footer_label, lv_pct(100));
+    lv_obj_align(footer_label, LV_ALIGN_CENTER, 0, 0);
     lv_label_set_text(footer_label, "ALL SYSTEMS NOMINAL");
-    lv_obj_center(footer_label);
     lv_obj_set_style_text_color(footer_label, lv_color_hex(0x094211), 0);
     lv_obj_set_style_text_font(footer_label, &lv_font_montserrat_48, 0);
 }
 
-void update_footer_status(FooterStatus status) {
-    if (!footer_bar || !footer_label) return;
+// Update footer based on active warnings mask
+void update_footer_status(uint32_t warning_mask) {
+    if(!footer_bar || !footer_label) return;
+    // Only update the text when the mask actually changes:
+    char buf[128];
+    format_warnings(warning_mask, buf, sizeof(buf));
+    lv_label_set_text(footer_label, buf);
+    prev_warning_mask = warning_mask;
 
-    if (status == FOOTER_OK) {
-        lv_obj_set_style_bg_color(footer_bar, lv_color_hex(0x1ac41f), 0);
-        lv_label_set_text(footer_label, "ALL SYSTEMS NOMINAL");
-        last_status = FOOTER_OK;
-    } else {
-        if (last_status != FOOTER_WARNING) {
-            lv_label_set_text(footer_label, "SYSTEM WARNING DETECTED");
-            last_status = FOOTER_WARNING;
-        }
-
-        if (millis() - last_footer_flash > FOOTER_FLASH_INTERVAL) {
-            last_footer_flash = millis();
-            footer_flash_state = !footer_flash_state;
-            lv_color_t flash_color = footer_flash_state
-                                    ? lv_color_hex(0x8B0000)
-                                    : lv_color_hex(0xFF0000);
-            lv_obj_set_style_bg_color(footer_bar, flash_color, 0);
-        }
+    // If no warnings, show green and bail out
+    if (warning_mask == WARN_NONE) {
+        lv_obj_set_style_bg_color(footer_bar, lv_color_hex(0x1AC41F), 0);
+        lv_obj_set_style_text_align(footer_label, LV_TEXT_ALIGN_CENTER, 0);
+        // reset flash state so it restarts clean next time
+        footer_flash_state = false;
+        last_footer_flash = millis();
+        return;
     }
+
+    // Otherwise, flash between dark and bright red every interval
+    uint32_t t = millis();
+    if (t - last_footer_flash >= FOOTER_FLASH_INTERVAL) {
+        last_footer_flash = t;
+        footer_flash_state = !footer_flash_state;
+        lv_color_t c = footer_flash_state
+                      ? lv_color_hex(0x8B0000)
+                      : lv_color_hex(0xFF0000);
+        lv_obj_set_style_bg_color(footer_bar, c, 0);
+        lv_obj_set_style_text_color(footer_label, lv_color_hex(0xFFFFFF), 0);
+        
+    }
+    
 }

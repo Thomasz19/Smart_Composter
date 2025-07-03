@@ -20,7 +20,7 @@ static lv_obj_t* label_status_o2;
 static lv_obj_t* label_tof_status[2];  // VL53L1X sensors
 
 lv_obj_t* create_diagnostics_screen(void) {
-
+    Serial.println("Creating Diagnostics Screen...");
     diag_screen = lv_obj_create(NULL);
     lv_obj_set_style_bg_color(diag_screen, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(diag_screen, LV_OPA_COVER, LV_PART_MAIN);
@@ -58,7 +58,7 @@ lv_obj_t* create_diagnostics_screen(void) {
     lv_obj_set_grid_cell(label_status_mux, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_set_style_text_font(label_status_mux, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_status_mux, lv_color_hex(0x32c935), 0);
-
+    Serial.println("Creating Diagnostics Screen: Mux row created");
     // Create a row for each aht20 sensor
     for (uint8_t i = 0; i < 3; i++) {
         lv_obj_t *row = lv_label_create(grid);
@@ -72,7 +72,7 @@ lv_obj_t* create_diagnostics_screen(void) {
         lv_obj_set_style_text_font(label_sensor_status[i], &lv_font_montserrat_40, 0);
         lv_obj_set_style_text_color(label_sensor_status[i], lv_color_hex(0x32c935), 0);
     }
-
+    Serial.println("Creating Diagnostics Screen: AHT20 sensor rows created");
     // Create 02 sensor row
     lv_obj_t *label_o2_title = lv_label_create(grid);
     lv_label_set_text(label_o2_title, "SEN0322:");
@@ -84,7 +84,7 @@ lv_obj_t* create_diagnostics_screen(void) {
     lv_obj_set_grid_cell(label_status_o2, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 6, 1);
     lv_obj_set_style_text_font(label_status_o2, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_color(label_status_o2, lv_color_hex(0x32c935), 0);
-
+    Serial.println("Creating Diagnostics Screen: O2 sensor row created");
     // Create VL53L1X sensor rows (ports 4 and 5 on I2C Mux)
     for (uint8_t j = 0; j < 2; j++) {
         lv_obj_t *label_tof_title = lv_label_create(grid);
@@ -98,7 +98,7 @@ lv_obj_t* create_diagnostics_screen(void) {
         lv_obj_set_style_text_font(label_tof_status[j], &lv_font_montserrat_40, 0);
         lv_obj_set_style_text_color(label_tof_status[j], lv_color_hex(0x32c935), 0);
     }
-
+    Serial.println("Creating Diagnostics Screen: VL53L1X sensor rows created");
     return diag_screen;
 }
 

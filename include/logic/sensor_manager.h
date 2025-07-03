@@ -47,4 +47,6 @@ extern bool limit_switch_states[5];
 
 void sonar_sensor_update();
 
+float sensor_manager_get_tof_distance(uint8_t idx);
+
 #endif // LOGIC_SENSOR_MANAGER_H

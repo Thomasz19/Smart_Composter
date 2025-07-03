@@ -113,6 +113,7 @@ void handle_screen_selection(const char *selected_label) {
     else if (!strcmp(selected_label, "Warnings"))          new_index = 2;
     else if (!strcmp(selected_label, "History"))           new_index = 3;
     else if (!strcmp(selected_label, "Settings"))          new_index = 4;
+    else if (!strcmp(selected_label, "Home"))              new_index = 5;
     else new_index = 0;
     Serial.print("[LVGL] ");
     Serial.println(new_index);

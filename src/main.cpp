@@ -57,7 +57,6 @@
 
 // Sensors
 #include "logic/sensor_manager.h"
-#include <NewPing.h>
 
 // Network
 #include "logic/network_manager.h"
@@ -93,14 +92,14 @@ mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 // ================= INIT SETUP =================
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);
-  Serial2.begin(9600);
+  //Serial2.begin(9600);
 
-  delay(1000);
+  delay(2000);
   Serial.println("DEBUG: Serial.println working");
   
   Display.begin();
   TouchDetector.begin();
-  lv_init();
+  //lv_init();
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
@@ -110,25 +109,31 @@ void setup() {
 
   // Initialize your UI modules, including screen_manual’s static globals
   settings_init_from_config();
-
+  Serial.println("5...................");
   // Init Diagnostic sceeen
   create_diagnostics_screen();
-
+  Serial.println("10...................");
   // Initialize sensors
   sensor_manager_init();
-
+  Serial.println("20...................");
   // Init Pins
   Limit_Switch_Init();
   LED_Init();
 
   // Init Screens
+  Serial.println("30...................");
   create_sensor_screen();
+  Serial.println("40...................");;
   create_warnings_screen();
+  Serial.println("50...................");
+  // Create the home screen
   create_home_screen();
-
+  Serial.println("60...................");
   // Setup watchdog
   watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
   lv_log_register_print_cb(my_print);
+  
+  update_footer_status(FOOTER_OK);
 }
 
 
@@ -149,12 +154,10 @@ void loop() {
     else if (active == sensor_screen) {
       sensor_manager_update();
       update_sensor_screen();
-     // sonar_update_and_fill_bar();
     }
-    // Limit-switch screen updates
-    // else if (active == limit_switch_screen) {
-    //   Limit_Switch_update();
-    // }
+  
+    Limit_Switch_update();
+
 
     LED_Update();
     
@@ -163,11 +166,11 @@ void loop() {
 
   // Inactivity timeout check
   if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
-    create_home_screen();
+    handle_screen_selection("Home"); // Go back to home screen after timeout
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
- // update_footer_status(FOOTER_OK);
+  
   watchdog.kick();
   //delay(5);
 }

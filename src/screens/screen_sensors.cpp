@@ -23,10 +23,17 @@ extern void global_input_event_cb(lv_event_t * e);
 static lv_obj_t *label_temp[3];
 static lv_obj_t *label_hum[3];
 static lv_obj_t *label_o2;
-lv_obj_t *bar_sonar;
-static lv_style_t style_bar_ind;
+static lv_obj_t *label_bar_pct;  // dynamic percentage label
+
+static lv_obj_t *bar_level;  // Compost level bar
+// Configuration for TOF buffering
+static const float MAX_DEPTH_CM = 111.0f;         // maximum sensor range
+static const int   BUF_SIZE     = 5;              // number of samples to average
+static const float OUTLIER_THRESH_CM = 20.0f;      // ignore changes >20 cm
 
 lv_obj_t *sensor_screen = nullptr;
+// Maximum measurable compost depth in cm
+
 
 int8_t o2Channel;
 // Threshold struct
@@ -92,70 +99,94 @@ static void update_sensor_values() {
         o2_whole, o2_decimal
         );
     #else
-        // tell sensor_manager to read the mux + AHT20s:
-    sensor_manager_update();
-
-    // Check which devices ACK’d on-bus:
-    ConnectionStatus status = sensor_manager_get_connection_status();
-
-    for (int i = 0; i < 3; i++) {
-        if (status.sensor[i]) {
-            // read temperature (°C) and convert to °F
-            float tempC = sensor_manager_get_temperature(i);
-            float tempF = tempC * 9.0f / 5.0f + 32.0f;
-            float hum   = sensor_manager_get_humidity(i);
-
-            // Convert tempF to “tenths” fixed-point:
-            int32_t temp10      = (int32_t)roundf(tempF * 10.0f);
-            int32_t temp_whole  = temp10 / 10;             // integer part
-            int32_t temp_decimal = abs(temp10 % 10);       // single decimal digit
-
-            // Convert hum to “tenths” fixed-point:
-            int32_t hum10       = (int32_t)roundf(hum * 10.0f);
-            int32_t hum_whole   = hum10 / 10;
-            int32_t hum_decimal = abs(hum10 % 10);
-
-            // Use LV_PRId32 to print “whole.decimal”:
-            lv_label_set_text_fmt(
-                label_temp[i],
-                "%" LV_PRId32 ".%" LV_PRId32 "°F",
-                temp_whole, temp_decimal
-            );
-            lv_label_set_text_fmt(
-                label_hum[i],
-                "%" LV_PRId32 ".%" LV_PRId32 "%%",
-                hum_whole, hum_decimal
-            );
-        } else {
-            lv_label_set_text(label_temp[i], "Error");
-            lv_label_set_text(label_hum[i],  "Error");
+        Serial.println("Sensor update started...");
+        // Update the sensor manager
+        sensor_manager_update();
+        ConnectionStatus status = sensor_manager_get_connection_status();
+        
+        // AHT20 readings
+        for (int i = 0; i < 3; i++) {
+            if (status.sensor[i]) {
+                float tempC = sensor_manager_get_temperature(i);
+                float tempF = tempC * 9.0f/5.0f + 32.0f;
+                float hum = sensor_manager_get_humidity(i);
+                int32_t t10 = roundf(tempF*10);
+                int32_t h10 = roundf(hum*10);
+                lv_label_set_text_fmt(label_temp[i], "%d.%d°F", t10/10, abs(t10%10));
+                lv_label_set_text_fmt(label_hum[i],  "%d.%d%%", h10/10, abs(h10%10));
+            } else {
+                lv_label_set_text(label_temp[i], "Error");
+                lv_label_set_text(label_hum[i],  "Error");
+            }
         }
-    }
+        
+        // O₂ reading
+        if (status.o2) {
+            float o2 = sensor_manager_get_oxygen();
+            int32_t o210 = roundf(o2*10);
+            lv_label_set_text_fmt(label_o2, "%d.%d%%", o210/10, abs(o210%10));
+        } else {
+            lv_label_set_text(label_o2, "Error");
+        }
 
-    if (status.o2) {
-        // read O₂ level (percent)
-        float o2          = sensor_manager_get_oxygen();
-        int32_t o210       = (int32_t)roundf(o2 * 10.0f);
-        int32_t o2_whole   = o210 / 10;
-        int32_t o2_decimal= abs(o210 % 10);
+        // Compost-level bar with buffer and outlier logic
+        static float buf[BUF_SIZE];
+        static uint8_t buf_idx = 0, buf_cnt = 0, outlier_count = 0;
+        float raw = status.vl53[0] ? sensor_manager_get_tof_distance(0) : NAN;
+        if (!isnan(raw)) {
+            float avg = 0;
+            if (buf_cnt > 0) {
+                for (uint8_t k = 0; k < buf_cnt; k++) avg += buf[k];
+                avg /= buf_cnt;
+            }
+            if (buf_cnt == 0 || fabs(raw - avg) <= OUTLIER_THRESH_CM) {
+                // valid reading
+                buf[buf_idx] = raw;
+                buf_idx = (buf_idx + 1) % BUF_SIZE;
+                if (buf_cnt < BUF_SIZE) buf_cnt++;
+                outlier_count = 0;
+            } else {
+                // potential outlier
+                outlier_count++;
+                if (outlier_count >= BUF_SIZE) {
+                    // sustained new value: reset buffer
+                    for (uint8_t k = 0; k < BUF_SIZE; k++) buf[k] = raw;
+                    buf_cnt = BUF_SIZE;
+                    buf_idx = 0;
+                    outlier_count = 0;
+                }
+            }
+        }
+        // Compute filtered average
+        float avg_depth = 0;
+        if (buf_cnt > 0) {
+            for (uint8_t k = 0; k < buf_cnt; k++) avg_depth += buf[k];
+            avg_depth /= buf_cnt;
+        }
 
-        lv_label_set_text_fmt(
-            label_o2,
-            "%" LV_PRId32 ".%" LV_PRId32 "%%",
-            o2_whole, o2_decimal
-        );
-    } else {
-        lv_label_set_text(label_o2, "Error");
-    }
-    
-#endif
+        // Map to bar 0..100
+        int bar_val = (int)constrain((avg_depth / MAX_DEPTH_CM) * 100.0f, 0, 100);
+        bar_val = 100 - bar_val; // Invert: 0% = full, 100% = empty
+        lv_bar_set_value(bar_level, bar_val, LV_ANIM_OFF);
+
+        // Update dynamic percentage label next to bar
+        lv_label_set_text_fmt(label_bar_pct, "%d%%", bar_val);
+        lv_area_t coords;
+        lv_obj_get_coords(bar_level, &coords);
+        int bar_h = coords.y2 - coords.y1;
+        // position y at bar bottom minus proportion
+        int y = coords.y2 - (bar_val * bar_h / 100);
+        // offset label to left of bar and centered vertically
+        lv_obj_set_pos(label_bar_pct, coords.x1 - 90, y - 8);
+        
+    #endif
 }
 // =================== SCREEN DRIVER ===================
 lv_obj_t* create_sensor_screen(void) {
 
     sensor_screen = lv_obj_create(NULL);
     
-
+    
     // Register the global input event callback
     //lv_obj_add_event_cb(sensor_screen, global_input_event_cb, LV_EVENT_ALL, NULL);
 
@@ -170,10 +201,10 @@ lv_obj_t* create_sensor_screen(void) {
 
     // ===== Sensor Data Grid =====
     lv_obj_t *grid = lv_obj_create(sensor_screen);
-    lv_obj_set_size(grid, lv_pct(100), 400);
+    lv_obj_set_size(grid, lv_pct(100), 300);
     lv_obj_align(grid, LV_ALIGN_TOP_MID, 0, 65);
 
-    static lv_coord_t col_dsc[] = { 200, 200, 180, 180, LV_GRID_TEMPLATE_LAST };
+    static lv_coord_t col_dsc[] = { 200, 200, 180, LV_GRID_TEMPLATE_LAST };
     static lv_coord_t row_dsc[] = { 60, 60, 60, 60, LV_GRID_TEMPLATE_LAST };
 
     lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
@@ -211,7 +242,7 @@ lv_obj_t* create_sensor_screen(void) {
         lv_obj_set_style_text_font(label_hum[i], &lv_font_montserrat_48, 0);
         lv_obj_set_style_text_color(label_hum[i], lv_color_black(), 0);
     }
-
+    
     // Line 
     lv_obj_t *line1 = lv_line_create(sensor_screen);
     lv_line_set_points(line1, line_points, 2);
@@ -231,26 +262,30 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_set_style_text_font(label_o2, &lv_font_montserrat_48, 0);
     lv_obj_set_style_text_color(label_o2, lv_color_black(), 0);
 
-    // Sonar Data
-    // === Compost Level Bar on right side (col 3, rows 0-3) ===
-    lv_style_init(&style_bar_ind);
-    lv_style_set_bg_opa(&style_bar_ind, LV_OPA_COVER);
-    lv_style_set_bg_color(&style_bar_ind, lv_palette_main(LV_PALETTE_RED));
-    lv_style_set_bg_grad_color(&style_bar_ind, lv_palette_main(LV_PALETTE_GREEN));
-    lv_style_set_bg_grad_dir(&style_bar_ind, LV_GRAD_DIR_VER);
-    lv_style_set_radius(&style_bar_ind, 0);
+   // Compost level bar on right
+    bar_level = lv_bar_create(sensor_screen);
+    lv_obj_set_size(bar_level,40,320);
+    lv_obj_align(bar_level,LV_ALIGN_RIGHT_MID,-30, 5);
+    lv_bar_set_range(bar_level,0,100);
+    lv_bar_set_value(bar_level,0,LV_ANIM_OFF);
+    lv_obj_set_style_radius(bar_level,0,LV_PART_MAIN);
 
+    static lv_style_t si; lv_style_init(&si);
+    lv_style_set_bg_opa(&si,LV_OPA_COVER);
+    lv_style_set_bg_color(&si,lv_palette_main(LV_PALETTE_RED));
+    lv_style_set_bg_grad_color(&si,lv_palette_main(LV_PALETTE_GREEN));
+    lv_style_set_bg_grad_dir(&si,LV_GRAD_DIR_VER);
+    lv_style_set_radius(&si,0);
+    lv_obj_add_style(bar_level,&si,LV_PART_INDICATOR);
 
-    bar_sonar = lv_bar_create(sensor_screen);
-    lv_obj_add_style(bar_sonar, &style_bar_ind, LV_PART_INDICATOR);
-    lv_obj_set_size(bar_sonar, 40, 300);
-    lv_obj_align(bar_sonar, LV_ALIGN_RIGHT_MID, -30, 10);
-    lv_bar_set_range(bar_sonar, 0, 100);
-    lv_bar_set_value(bar_sonar, 50, LV_ANIM_OFF);
-    lv_obj_set_style_radius(bar_sonar, 0, LV_PART_MAIN);
+    // Dynamic percentage label
+    label_bar_pct = lv_label_create(sensor_screen);
+    lv_label_set_text(label_bar_pct, "0%% Full");
+    lv_obj_set_style_text_font(label_bar_pct, &lv_font_montserrat_40, 0);
+    
     // Create footer
     create_footer(sensor_screen);
-
+    
     // Diagnostics button bottom-left
     lv_obj_t *btn_diag = lv_btn_create(sensor_screen);
     lv_obj_set_size(btn_diag, 140, 70);
@@ -262,8 +297,9 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_t *lbl_diag = lv_label_create(btn_diag);
     lv_label_set_text(lbl_diag, "Diagnostics");
     lv_obj_center(lbl_diag);
-
+    
     update_sensor_values(); // Initial values
+    
     return sensor_screen;
 }
 

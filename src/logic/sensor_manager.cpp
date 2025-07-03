@@ -7,6 +7,7 @@
 
 #include <DFRobot_OxygenSensor.h>
 #include "logic/sensor_manager.h"
+#include "screens/screen_warnings.h"
 #include "TCA9548.h"
 #include <VL53L1X.h>
 
@@ -73,7 +74,7 @@ void sensor_manager_init() {
     // Initialize VL53L1X TOF sensors
     Serial.println("Initializing VL53L1X sensors...");
     for (uint8_t j = 0; j < 2; j++) {
-        tca.selectChannel(sensor_channels[4 + j]);
+        tca.selectChannel(sensor_channels[3 + j]);
         tof_sensors[j].setBus(&Wire);
         if (tof_sensors[j].init()) {
             tof_sensors[j].setAddress(TOF_ADDRESS);
@@ -105,33 +106,51 @@ void sensor_manager_init() {
 
 
 void sensor_manager_update() {
-    // AHT Sensors
+    // Only read sensors that acknowledged on the bus
+    ConnectionStatus status = sensor_manager_get_connection_status();
+
+    // AHT20 Sensors (ports 0-2)
     for (uint8_t i = 0; i < 3; i++) {
         tca.selectChannel(sensor_channels[i]);
-        sensors_event_t humidity_event, temp_event;
-        if (aht_sensors[i].getEvent(&humidity_event, &temp_event)) {
-            sensor_data[i].humidity    = humidity_event.relative_humidity;
-            sensor_data[i].temperature = temp_event.temperature;
+        if (status.sensor[i]) {
+            sensors_event_t hum_evt, tmp_evt;
+            if (aht_sensors[i].getEvent(&hum_evt, &tmp_evt)) {
+                sensor_data[i].humidity    = hum_evt.relative_humidity;
+                sensor_data[i].temperature = tmp_evt.temperature;
+            } else {
+                sensor_data[i].humidity    = NAN;
+                sensor_data[i].temperature = NAN;
+            }
         } else {
             sensor_data[i].humidity    = NAN;
             sensor_data[i].temperature = NAN;
         }
     }
+    Serial.println("AHT20 sensors updated.");
 
-    // VL53L1X readings
+    // VL53L1X Sensors (ports 3-4)
     for (uint8_t j = 0; j < 2; j++) {
         tca.selectChannel(sensor_channels[3 + j]);
-        uint16_t dist = tof_sensors[j].readRangeContinuousMillimeters();
-        tof_distance[j] = tof_sensors[j].timeoutOccurred() ? NAN : dist * 0.1f; // cm
+        if (status.vl53[j]) {
+            uint16_t mm = tof_sensors[j].readRangeContinuousMillimeters();
+            tof_distance[j] = tof_sensors[j].timeoutOccurred() ? NAN : mm * 0.1f; // cm
+            Serial.print("VL53L1X #");
+        } else {
+            tof_distance[j] = NAN;
+        }
     }
+    Serial.println("VL53L1X sensors updated.");
 
-    // O2 Sensor
-    if (o2Channel >= 0) {
-        tca.selectChannel(o2Channel);
+    // O₂ Sensor (port 5)
+    if (status.o2) {
+        tca.selectChannel(sensor_channels[5]);
         oxygen_level = o2Sensor.getOxygenData(20);
+    } else {
+        oxygen_level = NAN;
     }
+    Serial.println("O₂ sensor updated.");
 
-    // Deselect all channels to avoid bus conflicts
+    // Deselect all channels to avoid conflicts
     tca.disableAllChannels();
 }
 
@@ -154,8 +173,14 @@ float sensor_manager_get_tof_distance(uint8_t idx) {
 
 // Checks whether the mux and each sensor are present on the bus
 ConnectionStatus sensor_manager_get_connection_status() {
-    ConnectionStatus status = {false, {false, false, false}};
-
+    
+    ConnectionStatus status = {
+        .mux    = false,
+        .sensor = { false, false, false },
+        .o2     = false,
+        .vl53   = { false, false }
+    };
+    
     // Test multiplexer at 0x70
     Wire.beginTransmission(0x70);
     status.mux = (Wire.endTransmission() == 0);
@@ -166,20 +191,19 @@ ConnectionStatus sensor_manager_get_connection_status() {
         Wire.beginTransmission(AHT20_ADDRESS);
         status.sensor[i] = (Wire.endTransmission() == 0);
     }
-
+    
     // VL53L1X sensors
     for (uint8_t j = 0; j < 2; j++) {
         tca.selectChannel(sensor_channels[3 + j]);
         Wire.beginTransmission(TOF_ADDRESS);
         status.vl53[j] = (Wire.endTransmission() == 0);
     }
-
+    
     // Check O₂ sensor
-    if (o2Channel >= 0) {
-            tca.selectChannel(o2Channel);
-            Wire.beginTransmission(Oxygen_IICAddress);    // define O2_I2C_ADDRESS (e.g. 0x??)
-            status.o2 = (Wire.endTransmission() == 0);
-    }
+    tca.selectChannel(sensor_channels[5]);
+    Wire.beginTransmission(Oxygen_IICAddress);    // define O2_I2C_ADDRESS (e.g. 0x??)
+    status.o2 = (Wire.endTransmission() == 0);
+        
     // Deselect all channels to avoid bus conflicts
     tca.disableAllChannels();
 
@@ -194,22 +218,35 @@ void Limit_Switch_Init() {
 }
 
 void Limit_Switch_update() {
-    for (uint8_t i = 0; i < 5; ++i) {
-        int pin_state = digitalRead(LIMIT_SWITCH_PINS[i]);
-        // LOW means switch is pressed (door closed)
-        limit_switch_states[i] = (pin_state == LOW);
+    uint32_t mask = WARN_NONE;
 
-        if (limit_switch_states[i]) {
-            Serial.print("Limit Switch ");
-            Serial.print(i);
-            Serial.println(" is CLOSED (door shut)");
-        } else {
-            Serial.print("Limit Switch ");
-            Serial.print(i);
-            Serial.println(" is OPEN (door open)");
+    // Read each switch; LOW = closed (door open)
+    for (uint8_t i = 0; i < 5; ++i) {
+        bool closed = (digitalRead(LIMIT_SWITCH_PINS[i]) == HIGH);
+        limit_switch_states[i] = closed;
+        // Serial.print("Limit switch ");
+        // Serial.print(i);
+        // Serial.print(": ");
+        // Serial.println(limit_switch_states[i] ? "CLOSED" : "OPEN");
+
+        if (closed) {
+            // 0 & 1 → front door
+            if (i == 0 || i == 1) {
+                mask |= WARN_FRONT_DOOR;
+            }
+            // 2 & 3 → back door
+            else if (i == 2 || i == 3) {
+                mask |= WARN_BACK_DOOR;
+            }
+            // 4 → loading door
+            else if (i == 4) {
+                mask |= WARN_LOADING_DOOR;
+            }
         }
     }
+    update_footer_status(mask);
 }
+
 
 // Accessor function to get switch state
 bool Limit_Switch_isClosed(uint8_t index) {
