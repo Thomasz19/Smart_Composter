@@ -34,7 +34,6 @@ static const float OUTLIER_THRESH_CM = 20.0f;      // ignore changes >20 cm
 lv_obj_t *sensor_screen = nullptr;
 // Maximum measurable compost depth in cm
 
-
 int8_t o2Channel;
 // Threshold struct
 struct TempThresholds {
@@ -99,49 +98,60 @@ static void update_sensor_values() {
         o2_whole, o2_decimal
         );
     #else
-        Serial.println("Sensor update started...");
-        // Update the sensor manager
-        sensor_manager_update();
-        ConnectionStatus status = sensor_manager_get_connection_status();
         
+        data_mutex.lock();
+        // copy into locals using your sensor_manager_* accessors
+        float temps[3] = {
+            sensor_manager_get_temperature(0),
+            sensor_manager_get_temperature(1),
+            sensor_manager_get_temperature(2)
+        };
+        float hums[3] = {
+            sensor_manager_get_humidity(0),
+            sensor_manager_get_humidity(1),
+            sensor_manager_get_humidity(2)
+        };
+        float o2_local  = sensor_manager_get_oxygen();
+        float tof_local = sensor_manager_get_tof_distance(0);
+        data_mutex.unlock();
+
+
         // AHT20 readings
+        Serial.println("AHT20 sensors:");
         for (int i = 0; i < 3; i++) {
-            if (status.sensor[i]) {
-                float tempC = sensor_manager_get_temperature(i);
-                float tempF = tempC * 9.0f/5.0f + 32.0f;
-                float hum = sensor_manager_get_humidity(i);
+            //if (s.sensor[i]) {
+                float tempF = temps[i] * 9.0f/5.0f + 32.0f;
                 int32_t t10 = roundf(tempF*10);
-                int32_t h10 = roundf(hum*10);
+                int32_t h10 = roundf(hums[i]*10);
                 lv_label_set_text_fmt(label_temp[i], "%d.%d°F", t10/10, abs(t10%10));
                 lv_label_set_text_fmt(label_hum[i],  "%d.%d%%", h10/10, abs(h10%10));
-            } else {
-                lv_label_set_text(label_temp[i], "Error");
-                lv_label_set_text(label_hum[i],  "Error");
-            }
+            // } else {
+            //     lv_label_set_text(label_temp[i], "Error");
+            //     lv_label_set_text(label_hum[i],  "Error");
+            // }
         }
-        
+        Serial.println("o2 sensor:");
         // O₂ reading
-        if (status.o2) {
-            float o2 = sensor_manager_get_oxygen();
-            int32_t o210 = roundf(o2*10);
+        //if (s.o2) {
+            int32_t o210 = roundf(o2_local*10);
             lv_label_set_text_fmt(label_o2, "%d.%d%%", o210/10, abs(o210%10));
-        } else {
-            lv_label_set_text(label_o2, "Error");
-        }
+        //} else {
+        //    lv_label_set_text(label_o2, "Error");
+        //}
 
+        Serial.println("VL53L1X sensors:");
         // Compost-level bar with buffer and outlier logic
         static float buf[BUF_SIZE];
         static uint8_t buf_idx = 0, buf_cnt = 0, outlier_count = 0;
-        float raw = status.vl53[0] ? sensor_manager_get_tof_distance(0) : NAN;
-        if (!isnan(raw)) {
+        if (!isnan(tof_local)) {
             float avg = 0;
             if (buf_cnt > 0) {
                 for (uint8_t k = 0; k < buf_cnt; k++) avg += buf[k];
                 avg /= buf_cnt;
             }
-            if (buf_cnt == 0 || fabs(raw - avg) <= OUTLIER_THRESH_CM) {
+            if (buf_cnt == 0 || fabs(tof_local - avg) <= OUTLIER_THRESH_CM) {
                 // valid reading
-                buf[buf_idx] = raw;
+                buf[buf_idx] = tof_local;
                 buf_idx = (buf_idx + 1) % BUF_SIZE;
                 if (buf_cnt < BUF_SIZE) buf_cnt++;
                 outlier_count = 0;
@@ -150,7 +160,7 @@ static void update_sensor_values() {
                 outlier_count++;
                 if (outlier_count >= BUF_SIZE) {
                     // sustained new value: reset buffer
-                    for (uint8_t k = 0; k < BUF_SIZE; k++) buf[k] = raw;
+                    for (uint8_t k = 0; k < BUF_SIZE; k++) buf[k] = tof_local;
                     buf_cnt = BUF_SIZE;
                     buf_idx = 0;
                     outlier_count = 0;
@@ -178,7 +188,7 @@ static void update_sensor_values() {
         int y = coords.y2 - (bar_val * bar_h / 100);
         // offset label to left of bar and centered vertically
         lv_obj_set_pos(label_bar_pct, coords.x1 - 90, y - 8);
-        
+        Serial.println("Sensor update completed.");
     #endif
 }
 // =================== SCREEN DRIVER ===================

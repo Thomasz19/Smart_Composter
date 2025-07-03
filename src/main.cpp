@@ -26,7 +26,7 @@
 
 // Mbed OS
 #include <mbed.h>
-
+#include "rtos.h"
 // Display Driver
 #include <lvgl.h>
 
@@ -59,7 +59,6 @@
 #include "logic/sensor_manager.h"
 
 // Network
-#include "logic/network_manager.h"
 #include "logic/actuator_manager.h"
 #include "settings_storage.h"
 
@@ -67,6 +66,7 @@
 extern lv_obj_t* diag_screen;
 extern lv_obj_t* sensor_screen;
 //extern lv_obj_t* limit_switch_screen;
+//ConnectionStatus latest_status;
 
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
@@ -75,6 +75,8 @@ Arduino_GigaDisplayTouch  TouchDetector;
 void global_input_event_cb(lv_event_t * e);
 void Init_LittleFS(void);
 void my_print(lv_log_level_t level, const char * buf);
+void sensorTask();
+
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
 static unsigned long last_sensor_update = 0;
@@ -84,6 +86,9 @@ QSPIFBlockDevice root(QSPI_SO0, QSPI_SO1, QSPI_SO2, QSPI_SO3,  QSPI_SCK, QSPI_CS
 mbed::MBRBlockDevice user_data(&root, 3);
 mbed::LittleFileSystem user_data_fs("user");
 
+// Create a thread with a decent stack for your I²C work
+static rtos::Thread sensorThread(osPriorityBelowNormal, 32 * 1024, nullptr, "SensorThread");
+using namespace std::chrono_literals;
 
 // ================= WATCH DOG =================
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
@@ -99,7 +104,7 @@ void setup() {
   
   Display.begin();
   TouchDetector.begin();
-  //lv_init();
+  lv_init();
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
@@ -131,9 +136,14 @@ void setup() {
   Serial.println("60...................");
   // Setup watchdog
   watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
+
   lv_log_register_print_cb(my_print);
-  
+
   update_footer_status(FOOTER_OK);
+
+  // start the sensor thread
+  sensorThread.start(mbed::callback(sensorTask));
+
 }
 
 
@@ -142,27 +152,27 @@ void setup() {
 void loop() {
   lv_timer_handler();
   // Poll sensor data at defined interval
-  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
-    lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
-
-    // Diagnostics screen updates
-    if (active == diag_screen) {
-      sensor_manager_update();
-      update_diagnostics_screen();
-    }
-    // Sensor screen updates
-    else if (active == sensor_screen) {
-      sensor_manager_update();
-      update_sensor_screen();
-    }
-  
-    Limit_Switch_update();
-
-
-    LED_Update();
+  // if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
     
-    last_sensor_update = millis();
-  }
+  //   lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
+
+  //   // Diagnostics screen updates
+  //   if (active == diag_screen) {
+  //     //sensor_manager_update();
+  //     update_diagnostics_screen();
+  //   }
+  //   // Sensor screen updates
+  //   else if (active == sensor_screen) {
+  //     //sensor_manager_update();
+  //     //update_sensor_screen();
+  //   }
+
+  //   Limit_Switch_update();
+
+  //   // Update the LED status based on sensor data
+  //   LED_Update();
+  //   last_sensor_update = millis();
+  // }
 
   // Inactivity timeout check
   if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
@@ -170,9 +180,8 @@ void loop() {
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
-  
   watchdog.kick();
-  //delay(5);
+  rtos::ThisThread::sleep_for(5ms);   // ms — yield so other RTOS hooks & housekeeping can run
 }
 
 // ================= FUNCTIONS =================

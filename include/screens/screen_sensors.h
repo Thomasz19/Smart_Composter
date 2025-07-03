@@ -16,6 +16,9 @@
 
 #include <lvgl.h>
 
+
+
+
 lv_obj_t* create_sensor_screen(void);
 
 void update_sensor_screen(void);

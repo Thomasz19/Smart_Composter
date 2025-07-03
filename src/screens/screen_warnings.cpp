@@ -203,6 +203,7 @@ void create_footer(lv_obj_t *parent) {
     lv_label_set_text(footer_label, "ALL SYSTEMS NOMINAL");
     lv_obj_set_style_text_color(footer_label, lv_color_hex(0x094211), 0);
     lv_obj_set_style_text_font(footer_label, &lv_font_montserrat_48, 0);
+    lv_obj_set_style_text_align(footer_label, LV_TEXT_ALIGN_CENTER, 0);
 }
 
 // Update footer based on active warnings mask
