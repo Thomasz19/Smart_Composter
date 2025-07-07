@@ -29,4 +29,7 @@ void sonar_update_and_fill_bar();
 
 bool read_sonar_packet(float &outInches);
 
+void SensorDataToSerial();
+
+
 #endif /* SCREEN_SENSORS_H */

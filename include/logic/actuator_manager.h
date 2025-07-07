@@ -15,21 +15,20 @@ void LED_On();
 
 void LED_Off();
 
+/** @brief  Updates the LED status based on security state.
+*         Call this periodically to reflect the current security status.
+*/
 void LED_Update();
 
-/** Initialize all actuators (PWM for blowers, GPIO for valves, LEDs, etc.). */
-void actuator_manager_init();
+/** @brief  Initializes the actuator scheduler.
+*         Call this once in setup() to configure pins
+*         and prepare the scheduler for use.
+*/
+void initActuatorScheduler();
 
-/** Set blower speed as a percentage (0–100%). */
-void actuator_manager_set_blower_speed(uint8_t pct);
-
-/** Open the compost aeration valve. */
-void actuator_manager_open_valve();
-
-/** Close the compost aeration valve. */
-void actuator_manager_close_valve();
-
-/** Turn the indicator LED on or off. */
-void actuator_manager_set_indicator(bool on);
+/** @brief  Call this every loop() to manage pump and blower states.
+*         It will activate the pump and blowers based on the configured intervals.
+*/
+void scheduleHourlyActuators();
 
 #endif // LOGIC_ACTUATOR_MANAGER_H

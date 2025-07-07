@@ -13,7 +13,12 @@
 #ifndef SCREEN_HOME_H
 #define SCREEN_HOME_H
 
-void create_home_screen(void);
+#include <lvgl.h>
+
+lv_obj_t* create_home_screen(void);
+
+extern char next_screen[32];  // Global variable to set the next screen
+
 void update_home_screen(void);  // New function to handle flashing
 
 #endif /* SCREEN_HOME_H */

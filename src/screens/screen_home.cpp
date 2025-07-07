@@ -16,15 +16,18 @@ LV_IMG_DECLARE(GVSU_Logo);
 
 extern void global_input_event_cb(lv_event_t * e);
 
+
+static lv_obj_t* home_screen = nullptr;
+
 static void screen_touch_cb(lv_event_t * e) {
   Serial.println("▶ screen_touch_cb fired");
-  handle_screen_selection("Sensor Overview");
+  handle_screen_selection("Sensor Overview");  // Set the next screen to Sensors
   Serial.println("◀ screen_touch_cb returned");
 }
 
-void create_home_screen(void) {
-    lv_obj_t *home_screen = lv_obj_create(NULL);
-    lv_scr_load(home_screen);
+lv_obj_t* create_home_screen() {
+
+    home_screen = lv_obj_create(NULL);
     
     // Set black background
     lv_obj_set_style_bg_color(home_screen, lv_color_hex(0x0032A0), LV_PART_MAIN);
@@ -43,6 +46,8 @@ void create_home_screen(void) {
     lv_obj_remove_style_all(touch_area);  // Make it invisible
     lv_obj_set_size(touch_area, lv_pct(100), lv_pct(100));
     lv_obj_add_event_cb(touch_area, screen_touch_cb, LV_EVENT_CLICKED, NULL);
+
+    return home_screen;
 }
 
 ////lv_color_hex(0x0032A0)
