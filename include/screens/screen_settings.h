@@ -27,5 +27,21 @@ bool check_pin();
 
 void logout_cb(lv_event_t *e);
 
+void security_timeout_check();
+
+/**
+ *  A helper you can directly use as an LV_EVENT_CLICKED callback
+ */
+void lock_overlay_cb(lv_event_t *e);
+
+/** @brief  Returns the user-configured blower ON time (seconds). */
+uint16_t getBlowerOnTime();
+
+/** @brief  Returns the user-configured pump ON time (seconds). */
+uint16_t getPumpOnTime();
+
+uint16_t getActivationInterval();
+
+extern unsigned long last_activity;
 
 #endif /* SCREEN_MOTORS_H */

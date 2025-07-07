@@ -29,4 +29,8 @@ void handle_screen_selection(const char *selected_label);
  */
 void create_header(lv_obj_t *parent, const char *title_txt);
 
+void dump_obj_tree(lv_obj_t *obj, int level = 0);
+
+void ensure_dropdown_style();
+
 #endif /* UI_MANAGER_H */

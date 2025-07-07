@@ -15,6 +15,7 @@
 #include <Arduino.h>
 #include <time.h>
 #include "settings_storage.h"
+#include <stdint.h>
 
 static lv_obj_t* settings_screen = nullptr;
 
@@ -35,7 +36,8 @@ enum ModalMode {
     MODAL_PIN_UNLOCK,
     MODAL_PIN_CHANGE,
     MODAL_BLOWER_TIME,
-    MODAL_PUMP_TIME 
+    MODAL_PUMP_TIME,
+    MODAL_ACTIVATION_INTERVAL
 };
 static ModalMode modal_mode      = MODAL_NONE;
 
@@ -51,6 +53,7 @@ static lv_obj_t *lock_overlay_tab3 = nullptr;
 
 static int blower_duration_sec = 15;
 static int pump_duration_sec   = 10;
+static int activation_interval_min = 1;
 
 // ---- Modal objects ----
 static lv_obj_t *modal_bg = NULL;
@@ -60,12 +63,13 @@ static int        modal_field_id = -1;
 static lv_obj_t * modal_target_btn  = NULL;
 
 // Forward declarations
-static void lock_overlay_cb(lv_event_t *e);
+
 static void change_pin_btn_cb(lv_event_t *e);
 static void show_modal_keypad(bool for_change);
 static void params_btn_cb(lv_event_t *e);
 static void modal_kb_event_cb(lv_event_t *e);
 static void config_time_btn_cb(lv_event_t *e);
+static void config_interval_btn_cb(lv_event_t *e);
 
 void logout_cb(lv_event_t *e) {
     security_unlocked = false;
@@ -73,7 +77,7 @@ void logout_cb(lv_event_t *e) {
 }
 
 lv_obj_t* create_settings_screen() {
-    Serial.println("[UI] Creating Settings screen"); // Debug
+    //Serial.println("[UI] Creating Settings screen"); // Debug
 
     // Constants for layout
     const int HEADER_H   = 80;
@@ -83,7 +87,6 @@ lv_obj_t* create_settings_screen() {
 
     // Setup Screen
     settings_screen = lv_obj_create(NULL);
-    
 
     // create header + footer
     create_header(settings_screen, "Settings");
@@ -122,16 +125,17 @@ lv_obj_t* create_settings_screen() {
     lv_obj_set_style_bg_opa(tab_3, LV_OPA_COVER, 0);
 
     // Tab 1 screen ----------------------------------------------------------------------------------
-    Serial.println("[UI] Initializing Tab 1");
+    //Serial.println("[UI] Initializing Tab 1");
     setup_ui_tab1(tab_1);
 
     // Tab 2 screen ----------------------------------------------------------------------------------
-    Serial.println("[UI] Initializing Tab 2");
+    //Serial.println("[UI] Initializing Tab 2");
     setup_ui_tab2(tab_2);
     
     // Tab 3 screen ----------------------------------------------------------------------------------
-    Serial.println("[UI] Initializing Tab 3");
+    //
     setup_ui_tab3(tab_3); 
+    Serial.println("[UI] Initialized Tab 3");
 
     return settings_screen;
 }
@@ -150,7 +154,7 @@ void setup_ui_tab1(lv_obj_t *tab_1)
     lv_obj_set_style_bg_opa(grid, LV_OPA_TRANSP, LV_PART_MAIN);
 
     if (pin_protection_enabled && !security_unlocked) {
-        Serial.println("[UI] Creating lock overlay on Tab 1");
+        //Serial.println("[UI] Creating lock overlay on Tab 1");
         lock_overlay_tab1 = lv_btn_create(tab_1);
         lv_obj_set_size(lock_overlay_tab1, lv_pct(95), lv_pct(95));
         lv_obj_align(lock_overlay_tab1, LV_ALIGN_CENTER, 0, 0);
@@ -273,23 +277,24 @@ void setup_ui_tab2(lv_obj_t *tab_2) {
         lv_obj_t *lbl = lv_label_create(lock_overlay_tab2);
         lv_label_set_text(lbl, "Tap to Unlock");
         lv_obj_center(lbl);
+        Serial.println("[UI] Lock overlay created on Tab 2"); // Debug
     }
 }
 
 void setup_ui_tab3(lv_obj_t *tab_3) 
 {
-    lv_obj_clean(tab_3);
+    //lv_obj_clean(tab_3);
 
-    const char *labels[] = {"Blower", "Pump"};
+    const char *labels[] = {"Interval", "Blower", "Pump"};
 
-    Serial.println("[UI] Setting up Config Tab");
+   Serial.println("[UI] Creating Settings screen - Tab3"); // Debug
 
     lv_obj_t *grid = lv_obj_create(tab_3);
     lv_obj_set_size(grid, lv_pct(100), lv_pct(100));
     lv_obj_align(grid, LV_ALIGN_TOP_LEFT, 0, 0);
 
     if (pin_protection_enabled && !security_unlocked) {
-        Serial.println("[UI] Creating lock overlay tab 3"); // Debug
+        //Serial.println("[UI] Creating lock overlay tab 3"); // Debug
         lock_overlay_tab3 = lv_btn_create(tab_3);
         lv_obj_set_size(lock_overlay_tab3, lv_pct(100), lv_pct(100));
         lv_obj_align(lock_overlay_tab3, LV_ALIGN_CENTER, 0, 0);
@@ -304,7 +309,13 @@ void setup_ui_tab3(lv_obj_t *tab_3)
     }
 
     static lv_coord_t col_dsc[] = { lv_pct(40), lv_pct(60), LV_GRID_TEMPLATE_LAST };
-    static lv_coord_t row_dsc[] = { lv_pct(25), lv_pct(37), lv_pct(37), LV_GRID_TEMPLATE_LAST };
+    static lv_coord_t row_dsc[] = {
+      lv_pct(25),  // title
+      lv_pct(25),  // blower
+      lv_pct(25),  // pump
+      lv_pct(25),  // interval
+      LV_GRID_TEMPLATE_LAST
+    };
 
     lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
     lv_obj_set_layout(grid, LV_LAYOUT_GRID);
@@ -316,7 +327,7 @@ void setup_ui_tab3(lv_obj_t *tab_3)
 
     // Title row (Row 0 spanning 2 columns)
     lv_obj_t *title_lbl = lv_label_create(grid);
-    lv_label_set_text(title_lbl, "Config On Time Per Hour");
+    lv_label_set_text(title_lbl, "Config On Times");
     lv_obj_set_style_text_font(title_lbl, &lv_font_montserrat_40, 0);
     lv_obj_set_style_text_align(title_lbl, LV_TEXT_ALIGN_LEFT, 0);
 
@@ -325,35 +336,54 @@ void setup_ui_tab3(lv_obj_t *tab_3)
     LV_GRID_ALIGN_CENTER, 0, 2,   // col 0, span 2 columns
     LV_GRID_ALIGN_CENTER, 0, 1);  // row 0, span 1 row
 
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         int row = i + 1;  // row 1 = Blower, row 2 = Pump
 
-        // Label (column 0)
-        lv_obj_t *lbl = lv_label_create(grid);
-        lv_label_set_text(lbl, labels[i]);
-        lv_obj_set_grid_cell(lbl, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, row, 1);
-        lv_obj_set_style_text_font(lbl, &lv_font_montserrat_40, 0);
+        // Left‐side label
+    lv_obj_t *lbl = lv_label_create(grid);
+    lv_label_set_text(lbl, labels[i]);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_40, 0);
+    lv_obj_set_grid_cell(lbl,
+        LV_GRID_ALIGN_START, 0, 1,
+        LV_GRID_ALIGN_CENTER, row, 1);
 
-        // Button (column 1)
+    if (i == 0) {
+        // Activation Interval: button that launches modal KB
         lv_obj_t *btn = lv_btn_create(grid);
-        lv_obj_set_grid_cell(btn, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_CENTER, row, 1);
+        lv_obj_set_user_data(btn, (void*)(intptr_t)MODAL_ACTIVATION_INTERVAL);
+        lv_obj_add_event_cb(btn, config_interval_btn_cb, LV_EVENT_CLICKED, NULL);
         lv_obj_set_style_pad_all(btn, 10, 0);
-        lv_obj_set_user_data(btn, (void*)(intptr_t)i); // store row index: 0 = blower, 1 = pump
-        lv_obj_add_event_cb(btn, config_time_btn_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_set_grid_cell(btn,
+            LV_GRID_ALIGN_STRETCH, 1, 1,
+            LV_GRID_ALIGN_CENTER, row, 1);
 
         lv_obj_t *btn_lbl = lv_label_create(btn);
         char buf[16];
-        if (i == 0) {
-            // Blower
-            snprintf(buf, sizeof(buf), "%d sec", blower_duration_sec);
-        } else {
-            // Pump
-            snprintf(buf, sizeof(buf), "%d sec", pump_duration_sec);
-        }
+        snprintf(buf, sizeof(buf), "%d min", activation_interval_min);
         lv_label_set_text(btn_lbl, buf);
         lv_obj_center(btn_lbl);
     }
+    else {
+        // Blower (i==1) or Pump (i==2)
+        int idx = i - 1;  // 0=Blower, 1=Pump
+        lv_obj_t *btn = lv_btn_create(grid);
+        lv_obj_set_user_data(btn, (void*)(intptr_t)(idx == 0
+            ? MODAL_BLOWER_TIME
+            : MODAL_PUMP_TIME));
+        lv_obj_add_event_cb(btn, config_time_btn_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_set_style_pad_all(btn, 10, 0);
+        lv_obj_set_grid_cell(btn,
+            LV_GRID_ALIGN_STRETCH, 1, 1,
+            LV_GRID_ALIGN_CENTER, row, 1);
 
+        lv_obj_t *btn_lbl = lv_label_create(btn);
+        char buf[16];
+        int dur = (idx == 0 ? blower_duration_sec : pump_duration_sec);
+        snprintf(buf, sizeof(buf), "%d sec", dur);
+        lv_label_set_text(btn_lbl, buf);
+        lv_obj_center(btn_lbl);
+    }
+    }
 }
 
 static void config_time_btn_cb(lv_event_t *e) {
@@ -363,21 +393,34 @@ static void config_time_btn_cb(lv_event_t *e) {
     modal_target_btn = btn;
     show_modal_keypad(false);
 }
-
+static void config_interval_btn_cb(lv_event_t *e) {
+    lv_obj_t *btn = (lv_obj_t*)lv_event_get_target(e);
+    modal_mode = MODAL_ACTIVATION_INTERVAL;
+    modal_target_btn = btn;
+    show_modal_keypad(false);
+}
 // Unlock overlay tapped
-static void lock_overlay_cb(lv_event_t *e) {
-    Serial.println("[UI] Lock overlay tapped"); // Debug
+void lock_overlay_cb(lv_event_t *e) {
+    lv_obj_t *btn = lv_event_get_target_obj(e);
+    // Disable further clicks immediately
+    lv_obj_add_flag(btn, LV_OBJ_FLAG_CLICKABLE);
+    //Serial.println("[UI] Lock overlay tapped"); // Debug
     modal_mode = MODAL_PIN_UNLOCK;
     show_modal_keypad(false);
+    Serial.println("[UI] Lock overlay tapped"); // Debug
 }
 
 static void change_pin_btn_cb(lv_event_t *e) {
     modal_mode = MODAL_PIN_CHANGE;
     show_modal_keypad(true);
+    Serial.println("[UI] Change PIN button tapped"); // Debug
 }
 
-
+/** Callback for the keyboard event when the user presses "Enter/OK"
+    * This is where we handle the input from the keypad
+    */
 static void params_btn_cb(lv_event_t * e) {
+    Serial.println("[UI] Params button clicked"); // Debug
     modal_mode      = MODAL_SENSOR_PARAM;
     // remember who launched us and what field
     modal_target_btn = (lv_obj_t *)lv_event_get_target(e);
@@ -407,12 +450,16 @@ static void params_btn_cb(lv_event_t * e) {
     lv_obj_add_event_cb(close_btn, [](lv_event_t * e){
         LV_UNUSED(e);
         // Destroy the whole modal (bg → ta, kb, cancel get removed too)
+        if(modal_bg == nullptr) {
+            Serial.println("Error: modal_bg is NULL");
+            return;
+        }
         lv_obj_del(modal_bg);
         // Clear your globals
-        modal_bg         = NULL;
-        modal_ta         = NULL;
-        modal_kb         = NULL;
-        modal_target_btn = NULL;
+        modal_bg         = nullptr;
+        modal_ta         = nullptr;
+        modal_kb         = nullptr;
+        modal_target_btn = nullptr;
         modal_field_id   = -1;
     }, LV_EVENT_CLICKED, NULL);
 
@@ -442,13 +489,39 @@ static void params_btn_cb(lv_event_t * e) {
 
     // when the user presses “Enter/OK”, we’ll get an LV_EVENT_READY
     lv_obj_add_event_cb(modal_kb, modal_kb_event_cb, LV_EVENT_READY, NULL);
+    Serial.println("[UI] Params button callback executed"); // Debug
 }
 
 void show_modal_keypad(bool for_change) {
+    static bool modal_in_progress = false;
+    if (modal_in_progress) return;
+    modal_in_progress = true;
     // Debug
     Serial.println("show_modal_keypad");
     // open kp
-    modal_bg = lv_obj_create(lv_scr_act());
+    if (modal_bg) {
+        lv_obj_del(modal_bg);
+        modal_bg = nullptr;
+        modal_kb = nullptr;
+        modal_ta = nullptr;
+        modal_target_btn = nullptr;
+        modal_field_id = -1;
+    }
+
+    lv_obj_t *parent = lv_scr_act();
+    if (!parent) {
+        Serial.println("Error: No active screen for modal parent!");
+        modal_in_progress = false;
+        return;
+    }
+
+    // Create a translucent full‐screen background
+    modal_bg = lv_obj_create(parent);
+
+    if (!modal_bg) {
+        Serial.println("Error: modal_bg is NULL");
+        return;
+    }
     lv_obj_set_size(modal_bg, lv_pct(100), lv_pct(100));
     lv_obj_set_style_bg_color(modal_bg, lv_color_black(), 0);
     lv_obj_set_style_bg_opa(modal_bg, LV_OPA_50, 0);
@@ -464,12 +537,16 @@ void show_modal_keypad(bool for_change) {
 
     lv_obj_add_event_cb(close_btn, [](lv_event_t *e) {
         if(modal_bg) {
-            lv_obj_del(modal_bg);
-            modal_bg = modal_kb = modal_ta = nullptr;
-        }
+        lv_obj_del(modal_bg);
+        modal_bg = nullptr;
+        modal_kb = nullptr;
+        modal_ta = nullptr;
+        modal_target_btn = nullptr;
         modal_field_id = -1;
+    }
     }, LV_EVENT_CLICKED, NULL);
 
+    // create textarea for numeric input
     modal_ta = lv_textarea_create(modal_bg);
     lv_obj_set_width(modal_ta, 200);
     lv_obj_align(modal_ta, LV_ALIGN_CENTER, 0, -90);
@@ -478,6 +555,7 @@ void show_modal_keypad(bool for_change) {
     lv_textarea_set_text(modal_ta, "");
     lv_obj_set_style_text_font(modal_ta, &lv_font_montserrat_40, LV_PART_MAIN | LV_STATE_DEFAULT);
 
+    // create keyboard
     modal_kb = lv_keyboard_create(modal_bg);
     lv_keyboard_set_mode(modal_kb, LV_KEYBOARD_MODE_NUMBER);
     lv_obj_set_style_text_font(modal_kb, &lv_font_montserrat_48, LV_PART_MAIN | LV_STATE_DEFAULT);
@@ -486,12 +564,16 @@ void show_modal_keypad(bool for_change) {
     lv_keyboard_set_textarea(modal_kb, modal_ta);
 
     lv_obj_add_event_cb(modal_kb, modal_kb_event_cb, LV_EVENT_READY, NULL);
+    Serial.println("[UI] Modal keypad shown"); // Debug
+    modal_in_progress = false;
 }
 
 static void modal_kb_event_cb(lv_event_t *e) {
+    Serial.println("[UI] Modal keyboard event callback"); // Debug
+    if (!modal_bg || !modal_ta || !modal_kb) return;
     if (lv_event_get_code(e) != LV_EVENT_READY) return;
     const char *txt = lv_textarea_get_text(modal_ta);
-
+    Serial.println("[DEBUG] Modal keyboard input");
     switch (modal_mode) {
         case MODAL_SENSOR_PARAM: {
             float new_val = atof(txt);
@@ -527,6 +609,11 @@ static void modal_kb_event_cb(lv_event_t *e) {
         }
         case MODAL_PIN_UNLOCK: {
             if (strcmp(txt, user_pin) == 0) {
+
+                // reset inactivity timer right now
+                extern unsigned long last_activity;
+                last_activity = millis();
+
                 if (lock_overlay_tab1) {
                     lv_obj_del(lock_overlay_tab1);
                     lock_overlay_tab1 = nullptr;
@@ -541,7 +628,7 @@ static void modal_kb_event_cb(lv_event_t *e) {
                 }
                 security_unlocked = true;
             } else {
-                printf("Entered PIN: %s, Stored PIN: %s\n", txt, user_pin);
+                // Show error message box
                 lv_obj_t *mbox = lv_msgbox_create(lv_scr_act());
                 lv_obj_set_size(mbox, 300, 200);
                 lv_msgbox_add_title(mbox, "Error");
@@ -584,17 +671,50 @@ static void modal_kb_event_cb(lv_event_t *e) {
             lv_obj_center(lbl);
             break;
         }
+        case MODAL_ACTIVATION_INTERVAL: {
+            int minutes = atoi(txt);
+            if (minutes < 1) minutes = 1;
+
+            // Update your globals & config
+            activation_interval_min            = minutes;
+            config.activation_interval_min     = minutes;
+            saveConfig();
+
+            // Update the button’s label
+            lv_obj_t *lbl = lv_obj_get_child((lv_obj_t*)modal_target_btn, 0);
+            char buf[16];
+            snprintf(buf, sizeof(buf), "%d min", minutes);
+            lv_label_set_text(lbl, buf);
+            lv_obj_center(lbl);
+            break;
+}
         default:
             break;
     }
 
-    lv_obj_del(modal_kb);
-    lv_obj_del(modal_ta);
-    lv_obj_del(modal_bg);
-
-    modal_mode = MODAL_NONE;
-    modal_field_id = -1;
+    if (modal_bg) {
+    lv_obj_del(modal_bg); // This deletes modal_bg and all its children (modal_kb, modal_ta, etc.)
+    modal_bg = nullptr;
+    modal_kb = nullptr;
+    modal_ta = nullptr;
     modal_target_btn = nullptr;
+    modal_field_id = -1;
+}
+    modal_mode = MODAL_NONE; // Reset modal mode
+}
+
+uint16_t getBlowerOnTime() {
+    // returns the current numeric value of the blower-time spinbox
+    return blower_duration_sec;
+}
+
+uint16_t getPumpOnTime() {
+    // returns the current numeric value of the pump-time spinbox
+    return pump_duration_sec;
+}
+uint16_t getActivationInterval() {
+    // returns the current numeric value of the activation interval
+    return activation_interval_min * 60; // convert minutes to seconds
 }
 
 // Call this once in setup(), after loadConfig(), to copy values into the UI’s private globals.
@@ -614,9 +734,24 @@ void settings_init_from_config() {
     // Copy blower/pump times:
     blower_duration_sec = config.blower_duration_sec;
     pump_duration_sec   = config.pump_duration_sec;
+    activation_interval_min = config.activation_interval_min;
 }
 
 
 bool check_pin() {
     return security_unlocked;
 }
+
+void security_timeout_check() {
+    // This function can be called periodically to check if the security should be locked again
+    // For example, if the user has been inactive for a certain period
+    unsigned long now = millis();
+
+    if (security_unlocked && (now - last_activity > 60000)) { // 1 minute of inactivity
+        security_unlocked = false;
+        logout_cb(nullptr); // Call logout to reset UI state
+    }
+    
+}
+
+

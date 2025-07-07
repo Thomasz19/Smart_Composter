@@ -16,11 +16,15 @@ typedef struct {
     // True if PIN protection is on; false if disabled
     bool pin_protection_enabled;
 
-    // How many seconds the blower should run
-    int blower_duration_sec;
+    // --- old fields:
+    uint16_t blower_duration_sec;
+    uint16_t pump_duration_sec;
+    uint32_t activation_interval_min;
 
-    // How many seconds the pump should run
-    int pump_duration_sec;
+    // --- new fields:
+    uint32_t lastPumpEpoch;    // seconds since 1970 when pump last ran
+    uint32_t lastBlowerEpoch;  // seconds since 1970 when blower sequence last ran
+
 } Config;
 
 // A single global instance that your UI code will reference.
@@ -37,4 +41,4 @@ void loadConfig();
 // It will open "/config.bin" (creating/truncating if needed) and write all bytes.
 void saveConfig();
 
-#endif /* SETTINGS_STORAGE_H */
+#endif /* SETTINGS_STORAGE_H_ */

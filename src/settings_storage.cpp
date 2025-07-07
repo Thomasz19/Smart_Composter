@@ -39,9 +39,14 @@ void loadConfig() {
     }
     strcpy(config.user_pin, "0000");
     config.pin_protection_enabled = true;
-    config.blower_duration_sec = 45;
-    config.pump_duration_sec   = 30;
+    config.blower_duration_sec = 10;
+    config.pump_duration_sec   = 10;
+    config.activation_interval_min = 60; // 1 minute
     // ------------------------------------------
+
+    uint32_t now = time(nullptr);
+    config.lastPumpEpoch    = now;
+    config.lastBlowerEpoch  = now;
 
     saveConfig();
 }
@@ -56,4 +61,4 @@ void saveConfig() {
     Serial.println("[LFS]OK: Changed Saved");
     fwrite(&config, 1, sizeof(Config), f);
     fclose(f);
-}
+}  

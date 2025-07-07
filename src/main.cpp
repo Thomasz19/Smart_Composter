@@ -9,7 +9,7 @@
 * for monitoring and controlling the smart composting system.
 *
 * Features include:
-*  - Sensor data display (temperature, humidity, CO₂, O₂)
+*  - Sensor data display (temperature, humidity, CO2, O2)
 *  - Warning and status notifications
 *  - Pump/Blower control interface
 *  - History logging view
@@ -26,13 +26,14 @@
 
 // Mbed OS
 #include <mbed.h>
-
+#include "rtos.h"
 // Display Driver
 #include <lvgl.h>
 
 // C Library
 #include <stdio.h>
 #include <string.h>
+
 #include <errno.h>
 
 // LittleFS (Mbed)
@@ -59,14 +60,24 @@
 #include "logic/sensor_manager.h"
 
 // Network
-#include "logic/network_manager.h"
 #include "logic/actuator_manager.h"
 #include "settings_storage.h"
 
 // Screen Pointers
 extern lv_obj_t* diag_screen;
 extern lv_obj_t* sensor_screen;
+
+#define CHUNK_LINES 15
+
+static lv_color_t buf1[240 * CHUNK_LINES];
+static lv_color_t buf2[240 * CHUNK_LINES];  // optional second buffer
+
+char next_screen[32] = {0}; // Pointer to the next screen to switch to
+char*last_screen = nullptr;
+
+unsigned long last_activity=0;
 //extern lv_obj_t* limit_switch_screen;
+//ConnectionStatus latest_status;
 
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
@@ -75,15 +86,30 @@ Arduino_GigaDisplayTouch  TouchDetector;
 void global_input_event_cb(lv_event_t * e);
 void Init_LittleFS(void);
 void my_print(lv_log_level_t level, const char * buf);
+
+
 // ================= Global Variables =================
 unsigned long glast_input_time = 0;
-static unsigned long last_sensor_update = 0;
+unsigned long input_time = 0; // For serial output
+
+static uint32_t lastSensorUpdate    = 0;
+static uint32_t lastLEDUpdate       = 0;
+static uint32_t lastSecurityCheck   = 0;
+static uint32_t lastActuatorSchedule= 0;
+
+constexpr uint32_t SENSOR_INTERVAL_MS      = 1000;
+constexpr uint32_t LED_INTERVAL_MS         = 500;
+constexpr uint32_t SECURITY_CHECK_MS       = 2000;
+constexpr uint32_t ACTUATOR_SCHEDULE_MS    = 3000; // hourly
 
 // Instantiate the raw flash driver on its default pins
 QSPIFBlockDevice root(QSPI_SO0, QSPI_SO1, QSPI_SO2, QSPI_SO3,  QSPI_SCK, QSPI_CS, QSPIF_POLARITY_MODE_1, 40000000);
 mbed::MBRBlockDevice user_data(&root, 3);
 mbed::LittleFileSystem user_data_fs("user");
 
+// Create a thread with a decent stack for your I²C work
+//static rtos::Thread sensorThread(osPriorityBelowNormal, 32 * 1024, nullptr, "SensorThread");
+//using namespace std::chrono_literals;
 
 // ================= WATCH DOG =================
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
@@ -99,7 +125,14 @@ void setup() {
   
   Display.begin();
   TouchDetector.begin();
-  //lv_init();
+  lv_init();
+
+  lv_disp_t *disp = lv_display_get_default();
+  lv_display_set_buffers(disp,
+                          buf1,    /* single buffer */
+                          buf2,
+                          sizeof(buf1),
+                          LV_DISPLAY_RENDER_MODE_PARTIAL);
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
@@ -110,8 +143,8 @@ void setup() {
   // Initialize your UI modules, including screen_manual’s static globals
   settings_init_from_config();
   Serial.println("5...................");
-  // Init Diagnostic sceeen
-  create_diagnostics_screen();
+
+
   Serial.println("10...................");
   // Initialize sensors
   sensor_manager_init();
@@ -119,21 +152,29 @@ void setup() {
   // Init Pins
   Limit_Switch_Init();
   LED_Init();
+  initActuatorScheduler();
 
   // Init Screens
   Serial.println("30...................");
-  create_sensor_screen();
+  //create_sensor_screen();
   Serial.println("40...................");;
-  create_warnings_screen();
+  //create_warnings_screen();
   Serial.println("50...................");
   // Create the home screen
-  create_home_screen();
+
+
   Serial.println("60...................");
   // Setup watchdog
   watchdog.start(2000); // Enable the watchdog and configure the duration of the timeout (ms).
+
   lv_log_register_print_cb(my_print);
-  
+
+  // Init Diagnostic sceeen
+  handle_screen_selection("Home");
   update_footer_status(FOOTER_OK);
+
+  Serial.println("100...................");
+
 }
 
 
@@ -141,27 +182,44 @@ void setup() {
 // ================= MAIN LOOP =================
 void loop() {
   lv_timer_handler();
-  // Poll sensor data at defined interval
-  if (millis() - last_sensor_update >= SENSOR_UPDATE_INTERVAL_MS) {
-    lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
 
+  uint32_t now = millis();
+
+  // Poll sensor data at defined interval
+  if (now - lastSensorUpdate >= SENSOR_UPDATE_INTERVAL_MS) {
+    lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
+    sensor_manager_update();
     // Diagnostics screen updates
     if (active == diag_screen) {
-      sensor_manager_update();
       update_diagnostics_screen();
     }
     // Sensor screen updates
-    else if (active == sensor_screen) {
-      sensor_manager_update();
+    else if (is_sensor_screen_active()) {
       update_sensor_screen();
+      Serial.println("Sensor screen updated");
     }
-  
-    Limit_Switch_update();
+    lastSensorUpdate = now;  // Reset the last sensor update time
+  }
 
-
+  // 2) LED status update (2 Hz)
+  if (now - lastLEDUpdate >= LED_INTERVAL_MS) {
     LED_Update();
+    Limit_Switch_update();
+    lastLEDUpdate = now;
+  }
     
-    last_sensor_update = millis();
+
+  //   // 4) Hourly actuators and limit switches
+  if (now - lastActuatorSchedule >= ACTUATOR_SCHEDULE_MS) {
+    scheduleHourlyActuators();
+    lastActuatorSchedule = now;
+  }
+    
+
+  //     // 3) Security PIN timeout (0.5 Hz)
+  if (now - lastSecurityCheck >= SECURITY_CHECK_MS) {
+    security_timeout_check();
+    lastSecurityCheck = now;
   }
 
   // Inactivity timeout check
@@ -170,14 +228,26 @@ void loop() {
     glast_input_time = millis(); // Prevent repeated reloads
   }
 
+  // Timeout for security PIN
+  // Send Data to Raspberry Pi every 10 seconds
+  if (millis() - input_time > 10000) {
+    SensorDataToSerial();
+    input_time = millis();  // Reset the input time
+  }
   
+  // // if (strcmp(next_screen, last_screen) != 0) {
+  // //   handle_screen_selection(next_screen);  // Switch to the next screen if set
+  // //   strcpy(last_screen, next_screen);
+  // // }
+
   watchdog.kick();
-  //delay(5);
+
 }
 
 // ================= FUNCTIONS =================
 void global_input_event_cb(lv_event_t * e) {
   glast_input_time = millis();  // Reset inactivity timer
+  last_activity = millis();
 }
 
 // ================= LITTLEFS SETUP =================

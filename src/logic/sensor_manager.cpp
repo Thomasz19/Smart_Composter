@@ -7,9 +7,13 @@
 
 #include <DFRobot_OxygenSensor.h>
 #include "logic/sensor_manager.h"
+#include "screens/screen_sensors.h"
 #include "screens/screen_warnings.h"
 #include "TCA9548.h"
 #include <VL53L1X.h>
+#include "mbed.h"
+using namespace std::chrono_literals;
+static rtos::Mutex i2c_mutex;
 
 #define Oxygen_IICAddress ADDRESS_3
 #define TOF_ADDRESS       0x29  // Default VL53L1X I2C address
@@ -29,6 +33,7 @@ struct SensorData {
     float humidity;
 };
 
+
 // VL53L1X Time-of-Flight sensors (ports 4 & 5 on the mux)
 static VL53L1X tof_sensors[2];
 static float tof_distance[2] = { NAN, NAN };
@@ -44,9 +49,17 @@ static const uint8_t sensor_channels[8] = {0, 1, 2, 3, 4, 5, 6, 7};
 // AHT20 I2C address
 static const uint8_t AHT20_ADDRESS = 0x38;
 
+// Mutex to protect shared data
+rtos::Mutex           data_mutex;
+ConnectionStatus      latest_status;
+float                 latest_temps[3];
+float                 latest_hums[3];
+float                 latest_o2;
+float                 latest_depth_cm;
+
 void sensor_manager_init() {
     o2Channel = -1;
-    Wire.begin();
+    Wire.begin();           // Initialize I2C bus
 
     if (tca.begin() == false)
     {
@@ -126,7 +139,7 @@ void sensor_manager_update() {
             sensor_data[i].temperature = NAN;
         }
     }
-    Serial.println("AHT20 sensors updated.");
+    //Serial.println("AHT20 sensors updated.");
 
     // VL53L1X Sensors (ports 3-4)
     for (uint8_t j = 0; j < 2; j++) {
@@ -134,12 +147,14 @@ void sensor_manager_update() {
         if (status.vl53[j]) {
             uint16_t mm = tof_sensors[j].readRangeContinuousMillimeters();
             tof_distance[j] = tof_sensors[j].timeoutOccurred() ? NAN : mm * 0.1f; // cm
-            Serial.print("VL53L1X #");
+            // Serial.print("VL53L1X #");
+            // Serial.print(j);
+            // Serial.print(": ");
         } else {
             tof_distance[j] = NAN;
         }
     }
-    Serial.println("VL53L1X sensors updated.");
+    //Serial.println("VL53L1X sensors updated.");
 
     // O₂ Sensor (port 5)
     if (status.o2) {
@@ -148,7 +163,7 @@ void sensor_manager_update() {
     } else {
         oxygen_level = NAN;
     }
-    Serial.println("O₂ sensor updated.");
+   // Serial.println("O₂ sensor updated.");
 
     // Deselect all channels to avoid conflicts
     tca.disableAllChannels();
@@ -219,31 +234,48 @@ void Limit_Switch_Init() {
 
 void Limit_Switch_update() {
     uint32_t mask = WARN_NONE;
+    static bool prev_closed[5] = { false, false, false, false, false };
 
-    // Read each switch; LOW = closed (door open)
     for (uint8_t i = 0; i < 5; ++i) {
         bool closed = (digitalRead(LIMIT_SWITCH_PINS[i]) == HIGH);
         limit_switch_states[i] = closed;
-        // Serial.print("Limit switch ");
-        // Serial.print(i);
-        // Serial.print(": ");
-        // Serial.println(limit_switch_states[i] ? "CLOSED" : "OPEN");
 
+        // edge: only fire when we go from open → closed
         if (closed) {
-            // 0 & 1 → front door
+            // home in on which door
             if (i == 0 || i == 1) {
                 mask |= WARN_FRONT_DOOR;
-            }
-            // 2 & 3 → back door
+                }
             else if (i == 2 || i == 3) {
                 mask |= WARN_BACK_DOOR;
-            }
-            // 4 → loading door
-            else if (i == 4) {
+                }
+            else { // i == 4
                 mask |= WARN_LOADING_DOOR;
             }
         }
+        if (closed && !prev_closed[i]) {
+            // home in on which door
+            if (i == 0 || i == 1) {
+                Serial.println("Unloaded");
+            }
+            else if (i == 2 || i == 3) {
+                Serial.println("Unloaded");
+            }
+            else { // i == 4
+                Serial.println("Loaded");
+            }
+        }
+
+
+
+
+
+
+
+        // remember for next time
+        prev_closed[i] = closed;
     }
+
     update_footer_status(mask);
 }
 
@@ -253,3 +285,12 @@ bool Limit_Switch_isClosed(uint8_t index) {
     if (index < 5) return limit_switch_states[index];
     return false;
 }
+
+// void sensorTask() {
+//     while (true) {
+//         // 2) Do *all* I²C work here:
+//         sensor_manager_update();
+//         //Serial.println("Sensor task----1");
+//         rtos::ThisThread::sleep_for(2s);
+//     }
+// }

@@ -16,6 +16,9 @@
 
 #include <lvgl.h>
 
+
+
+
 lv_obj_t* create_sensor_screen(void);
 
 void update_sensor_screen(void);
@@ -25,5 +28,8 @@ bool is_sensor_screen_active(void);
 void sonar_update_and_fill_bar();
 
 bool read_sonar_packet(float &outInches);
+
+void SensorDataToSerial();
+
 
 #endif /* SCREEN_SENSORS_H */

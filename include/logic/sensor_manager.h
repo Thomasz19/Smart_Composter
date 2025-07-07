@@ -11,6 +11,7 @@
 #include <Adafruit_AHTX0.h>
 #include <Wire.h>
 #include <Arduino.h>
+#include <mbed.h>
 
 // Structure representing I2C connection status of the mux and sensors
 typedef struct {
@@ -19,6 +20,11 @@ typedef struct {
     bool o2;
     bool vl53[2]; // true for each VL53L1X that acknowledged
 } ConnectionStatus;
+
+// A mutex to guard all shared data
+extern rtos::Mutex   data_mutex;
+
+void sensorTask();
 
 /** Initialize all compost sensors (I²C, ADC channels, etc.). */
 void sensor_manager_init();

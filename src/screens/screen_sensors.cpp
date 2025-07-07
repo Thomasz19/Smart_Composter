@@ -34,7 +34,6 @@ static const float OUTLIER_THRESH_CM = 20.0f;      // ignore changes >20 cm
 lv_obj_t *sensor_screen = nullptr;
 // Maximum measurable compost depth in cm
 
-
 int8_t o2Channel;
 // Threshold struct
 struct TempThresholds {
@@ -99,36 +98,38 @@ static void update_sensor_values() {
         o2_whole, o2_decimal
         );
     #else
-        Serial.println("Sensor update started...");
-        // Update the sensor manager
         sensor_manager_update();
         ConnectionStatus status = sensor_manager_get_connection_status();
         
         // AHT20 readings
         for (int i = 0; i < 3; i++) {
-            if (status.sensor[i]) {
-                float tempC = sensor_manager_get_temperature(i);
-                float tempF = tempC * 9.0f/5.0f + 32.0f;
-                float hum = sensor_manager_get_humidity(i);
-                int32_t t10 = roundf(tempF*10);
-                int32_t h10 = roundf(hum*10);
-                lv_label_set_text_fmt(label_temp[i], "%d.%d°F", t10/10, abs(t10%10));
-                lv_label_set_text_fmt(label_hum[i],  "%d.%d%%", h10/10, abs(h10%10));
+            if (label_temp[i] && label_hum[i]) {
+                if (status.sensor[i]) {
+                    float tempC = sensor_manager_get_temperature(i);
+                    float tempF = tempC * 9.0f/5.0f + 32.0f;
+                    float hum = sensor_manager_get_humidity(i);
+                    int32_t t10 = roundf(tempF*10);
+                    int32_t h10 = roundf(hum*10);
+                    lv_label_set_text_fmt(label_temp[i], "%d.%d°F", t10/10, abs(t10%10));
+                    lv_label_set_text_fmt(label_hum[i],  "%d.%d%%", h10/10, abs(h10%10));
+                } else {
+                    lv_label_set_text(label_temp[i], "Error");
+                    lv_label_set_text(label_hum[i],  "Error");
+                }
+            }
+     }
+        // O₂ reading
+        if (label_o2) {
+            if (status.o2) {
+                float o2 = sensor_manager_get_oxygen();
+                int32_t o210 = roundf(o2*10);
+                lv_label_set_text_fmt(label_o2, "%d.%d%%", o210/10, abs(o210%10));
             } else {
-                lv_label_set_text(label_temp[i], "Error");
-                lv_label_set_text(label_hum[i],  "Error");
+                lv_label_set_text(label_o2, "Error");
             }
         }
-        
-        // O₂ reading
-        if (status.o2) {
-            float o2 = sensor_manager_get_oxygen();
-            int32_t o210 = roundf(o2*10);
-            lv_label_set_text_fmt(label_o2, "%d.%d%%", o210/10, abs(o210%10));
-        } else {
-            lv_label_set_text(label_o2, "Error");
-        }
 
+        //Serial.println("VL53L1X sensors:");
         // Compost-level bar with buffer and outlier logic
         static float buf[BUF_SIZE];
         static uint8_t buf_idx = 0, buf_cnt = 0, outlier_count = 0;
@@ -163,29 +164,29 @@ static void update_sensor_values() {
             for (uint8_t k = 0; k < buf_cnt; k++) avg_depth += buf[k];
             avg_depth /= buf_cnt;
         }
+        if (bar_level && label_bar_pct) {
+            // Map to bar 0..100
+            int bar_val = (int)constrain((avg_depth / MAX_DEPTH_CM) * 100.0f, 0, 100);
+            bar_val = 100 - bar_val; // Invert: 0% = full, 100% = empty
+            lv_bar_set_value(bar_level, bar_val, LV_ANIM_OFF);
 
-        // Map to bar 0..100
-        int bar_val = (int)constrain((avg_depth / MAX_DEPTH_CM) * 100.0f, 0, 100);
-        bar_val = 100 - bar_val; // Invert: 0% = full, 100% = empty
-        lv_bar_set_value(bar_level, bar_val, LV_ANIM_OFF);
-
-        // Update dynamic percentage label next to bar
-        lv_label_set_text_fmt(label_bar_pct, "%d%%", bar_val);
-        lv_area_t coords;
-        lv_obj_get_coords(bar_level, &coords);
-        int bar_h = coords.y2 - coords.y1;
-        // position y at bar bottom minus proportion
-        int y = coords.y2 - (bar_val * bar_h / 100);
-        // offset label to left of bar and centered vertically
-        lv_obj_set_pos(label_bar_pct, coords.x1 - 90, y - 8);
-        
+            // Update dynamic percentage label next to bar
+            lv_label_set_text_fmt(label_bar_pct, "%d%%", bar_val);
+            lv_area_t coords;
+            lv_obj_get_coords(bar_level, &coords);
+            int bar_h = coords.y2 - coords.y1;
+            // position y at bar bottom minus proportion
+            int y = coords.y2 - (bar_val * bar_h / 100);
+            // offset label to left of bar and centered vertically
+            lv_obj_set_pos(label_bar_pct, coords.x1 - 90, y - 24);
+        }
+        Serial.println("Sensor update completed.");
     #endif
 }
 // =================== SCREEN DRIVER ===================
 lv_obj_t* create_sensor_screen(void) {
 
     sensor_screen = lv_obj_create(NULL);
-    
     
     // Register the global input event callback
     //lv_obj_add_event_cb(sensor_screen, global_input_event_cb, LV_EVENT_ALL, NULL);
@@ -264,7 +265,7 @@ lv_obj_t* create_sensor_screen(void) {
 
    // Compost level bar on right
     bar_level = lv_bar_create(sensor_screen);
-    lv_obj_set_size(bar_level,40,320);
+    lv_obj_set_size(bar_level,40,310);
     lv_obj_align(bar_level,LV_ALIGN_RIGHT_MID,-30, 5);
     lv_bar_set_range(bar_level,0,100);
     lv_bar_set_value(bar_level,0,LV_ANIM_OFF);
@@ -280,11 +281,10 @@ lv_obj_t* create_sensor_screen(void) {
 
     // Dynamic percentage label
     label_bar_pct = lv_label_create(sensor_screen);
-    lv_label_set_text(label_bar_pct, "0%% Full");
+    lv_label_set_text(label_bar_pct, "0%%");
     lv_obj_set_style_text_font(label_bar_pct, &lv_font_montserrat_40, 0);
     
-    // Create footer
-    create_footer(sensor_screen);
+    
     
     // Diagnostics button bottom-left
     lv_obj_t *btn_diag = lv_btn_create(sensor_screen);
@@ -299,7 +299,9 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_center(lbl_diag);
     
     update_sensor_values(); // Initial values
-    
+    // Create footer
+    create_footer(sensor_screen);
+
     return sensor_screen;
 }
 
@@ -312,4 +314,23 @@ void update_sensor_screen() {
    
     //Serial.println("Update data");
 
+}
+
+void SensorDataToSerial() {
+    // Print sensor data to Serial for debugging
+    Serial.print("Data:");
+    for (int i = 0; i < 3; i++) {
+        float temp = sensor_manager_get_temperature(i);
+        float hum = sensor_manager_get_humidity(i);
+        Serial.print(temp);
+        Serial.print(",");
+        Serial.print(hum);
+        Serial.print(",");
+    }
+
+    float o2 = sensor_manager_get_oxygen();
+    Serial.print(o2);
+    Serial.print(",");
+    float tof = sensor_manager_get_tof_distance(0);
+    Serial.println(tof);
 }
