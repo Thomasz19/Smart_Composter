@@ -30,7 +30,7 @@ static lv_obj_t *bar_level;  // Compost level bar
 static const float MAX_DEPTH_CM = 111.0f;         // maximum sensor range
 static const int   BUF_SIZE     = 5;              // number of samples to average
 static const float OUTLIER_THRESH_CM = 20.0f;      // ignore changes >20 cm
-
+static int bar_val;
 lv_obj_t *sensor_screen = nullptr;
 // Maximum measurable compost depth in cm
 
@@ -166,7 +166,7 @@ static void update_sensor_values() {
         }
         if (bar_level && label_bar_pct) {
             // Map to bar 0..100
-            int bar_val = (int)constrain((avg_depth / MAX_DEPTH_CM) * 100.0f, 0, 100);
+            bar_val = (int)constrain((avg_depth / MAX_DEPTH_CM) * 100.0f, 0, 100);
             bar_val = 100 - bar_val; // Invert: 0% = full, 100% = empty
             lv_bar_set_value(bar_level, bar_val, LV_ANIM_OFF);
 
@@ -298,7 +298,7 @@ lv_obj_t* create_sensor_screen(void) {
     lv_label_set_text(lbl_diag, "Diagnostics");
     lv_obj_center(lbl_diag);
     
-    update_sensor_values(); // Initial values
+    //update_sensor_values(); // Initial values
     // Create footer
     create_footer(sensor_screen);
 
@@ -320,10 +320,11 @@ void SensorDataToSerial() {
     // Print sensor data to Serial for debugging
     Serial.print("Data:");
     for (int i = 0; i < 3; i++) {
-        float temp = sensor_manager_get_temperature(i);
-        float hum = sensor_manager_get_humidity(i);
-        Serial.print(temp);
+        float tempC = sensor_manager_get_temperature(i);
+        float tempF = tempC * 9.0f / 5.0f + 32.0f;    // convert to °F
+        Serial.print(tempF, 1);                      // print with 1 decimal
         Serial.print(",");
+        float hum = sensor_manager_get_humidity(i);
         Serial.print(hum);
         Serial.print(",");
     }
@@ -331,6 +332,5 @@ void SensorDataToSerial() {
     float o2 = sensor_manager_get_oxygen();
     Serial.print(o2);
     Serial.print(",");
-    float tof = sensor_manager_get_tof_distance(0);
-    Serial.println(tof);
+    Serial.println(bar_val);
 }

@@ -67,10 +67,10 @@
 extern lv_obj_t* diag_screen;
 extern lv_obj_t* sensor_screen;
 
-#define CHUNK_LINES 15
+#define CHUNK_LINES 7
 
-static lv_color_t buf1[240 * CHUNK_LINES];
-static lv_color_t buf2[240 * CHUNK_LINES];  // optional second buffer
+static lv_color_t buf1[800 * CHUNK_LINES];
+static lv_color_t buf2[800 * CHUNK_LINES];  // optional second buffer
 
 char next_screen[32] = {0}; // Pointer to the next screen to switch to
 char*last_screen = nullptr;
@@ -98,9 +98,9 @@ static uint32_t lastSecurityCheck   = 0;
 static uint32_t lastActuatorSchedule= 0;
 
 constexpr uint32_t SENSOR_INTERVAL_MS      = 1000;
-constexpr uint32_t LED_INTERVAL_MS         = 500;
-constexpr uint32_t SECURITY_CHECK_MS       = 2000;
-constexpr uint32_t ACTUATOR_SCHEDULE_MS    = 3000; // hourly
+constexpr uint32_t LED_INTERVAL_MS         = 250;
+constexpr uint32_t SECURITY_CHECK_MS       = 500;
+constexpr uint32_t ACTUATOR_SCHEDULE_MS    = 1000; // hourly
 
 // Instantiate the raw flash driver on its default pins
 QSPIFBlockDevice root(QSPI_SO0, QSPI_SO1, QSPI_SO2, QSPI_SO3,  QSPI_SCK, QSPI_CS, QSPIF_POLARITY_MODE_1, 40000000);
