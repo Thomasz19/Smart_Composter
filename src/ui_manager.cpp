@@ -23,8 +23,27 @@ extern void global_input_event_cb(lv_event_t * e);
 static lv_style_t dropdown_list_style;
 static bool dropdown_style_initialized = false;
 
-static int       selected_index=-1;  // default to Sensor Overview
+
 static lv_obj_t *current_screen = nullptr;
+
+// Global selected index for dropdown menu
+lv_obj_t *home_screen = nullptr;
+lv_obj_t *sensor_screen = nullptr;
+lv_obj_t *manual_screen = nullptr;
+lv_obj_t *warnings_screen = nullptr;
+lv_obj_t *settings_screen = nullptr;
+
+// Footer variables
+static bool footer_flash_state = false;
+static uint32_t last_footer_flash = 0;
+static uint32_t prev_warning_mask = -1;
+static const uint32_t FOOTER_FLASH_INTERVAL = 500;
+
+lv_obj_t *global_footer;
+lv_obj_t *global_footer_label;
+
+// Global dropdown menu selection index
+lv_obj_t *dropdown = nullptr;
 
 /*
 Function: Drop down selection even handler
@@ -50,8 +69,13 @@ static void dropdown_event_handler(lv_event_t * e) {
     // Change screen
     if(code == LV_EVENT_VALUE_CHANGED) {
         char buf[32];
+       
         lv_dropdown_get_selected_str(obj, buf, sizeof(buf));
+        Serial.print("[GDL] Selected: ");
+        Serial.println(buf);
         handle_screen_selection(buf);
+        lv_obj_set_parent(global_footer, current_screen);
+        lv_obj_set_align(global_footer, LV_ALIGN_BOTTOM_MID);
     }
 }
 
@@ -64,9 +88,7 @@ void create_global_dropdown(lv_obj_t *parent) {
 
     Serial.println("Create global dropdown"); // Debug
 
-    lv_obj_t *dropdown = lv_dropdown_create(parent);
-
-    
+    dropdown = lv_dropdown_create(parent);
 
     lv_obj_set_size(dropdown, 80, 76);  // width: 150px, height: 40px
     lv_obj_align(dropdown, LV_ALIGN_TOP_LEFT, 2, 2);
@@ -95,16 +117,14 @@ void create_global_dropdown(lv_obj_t *parent) {
     //lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(dropdown, dropdown_event_handler, LV_EVENT_ALL, NULL);
 
-    lv_dropdown_set_selected(dropdown, selected_index >= 0 ? selected_index : 0);
 }
 
 /*
 Function: Handles the selection of each item in the drop down menu
 */
 void handle_screen_selection(const char *selected_label) {
-    Serial.println("[GDL] changing Screens..."); // Debug
+    Serial.println("[Screen Handler] changing Screens..."); // Debug
     int new_index = -1;
-    
 
     if      (!strcmp(selected_label, "Sensor Overview"))   new_index = 0;
     else if (!strcmp(selected_label, "Manual Control"))    new_index = 1;
@@ -112,9 +132,12 @@ void handle_screen_selection(const char *selected_label) {
     else if (!strcmp(selected_label, "Settings"))          new_index = 3;
     else if (!strcmp(selected_label, "Home"))              new_index = 4;
     else new_index = 0;
-    Serial.print("[LVGL] ");
+    Serial.print("[Screen Handler] ");
     Serial.println(selected_label);
-
+    Serial.print("[Screen Handler] new index: ");
+    Serial.println(new_index);
+    Serial.print("[Screen Handler] selected index: ");
+    Serial.println(selected_index);
     if(new_index == selected_index) return; // no change
 
     selected_index = new_index;
@@ -123,44 +146,38 @@ void handle_screen_selection(const char *selected_label) {
     if (new_index >= 0) {
        
         switch (new_index) {
-            case 0: current_screen = create_sensor_screen();         break;
-            case 1: current_screen = create_manual_control_screen(); break;
-            case 2: current_screen = create_warnings_screen();       break;
-            case 3: current_screen = create_settings_screen();       break;
-            case 4: current_screen = create_home_screen();           break;
-            default: current_screen = create_sensor_screen();        break;
+            case 0: current_screen = sensor_screen;         break;
+            case 1: current_screen = manual_screen;         break;
+            case 2: current_screen = warnings_screen;       break;
+            case 3: current_screen = settings_screen;       break;
+            case 4: current_screen = home_screen;           break;
+            default: current_screen = sensor_screen;        break;
         }
 
+        // Load the new screen without animation
         if(current_screen) {
-            lv_screen_load_anim(current_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false);
-            
-            
+            // Load new screen and delete old screen
+            lv_screen_load_anim(current_screen, LV_SCR_LOAD_ANIM_NONE, 0, 0, false); 
+            lv_dropdown_set_selected_highlight(dropdown, selected_index);
         }
-
     }
-
-    // if (dropdown) {
-    //     // Only close if dropdown is still valid and on the current screen
-    //     if (lv_obj_is_valid(dropdown)) {
-    //         lv_dropdown_set_selected(dropdown, selected_index);
-    //         lv_dropdown_close(dropdown);
-    //     }
-    //     dropdown = nullptr; // Invalidate pointer after screen switch
-    //     LV_ASSERT_MEM_INTEGRITY();
-    // }
-    // lv_mem_monitor_t mon;
-    // lv_mem_monitor(&mon);
-
-    // Serial.print(F("[LVGL] Used: "));
-    // Serial.print(mon.total_size - mon.free_size);
-    // Serial.print(F(" bytes | Free: "));
-    // Serial.print(mon.free_size);
-    // Serial.print(F(" bytes | Largest Free: "));
-    // Serial.print(mon.free_biggest_size);
-    // Serial.print(F(" bytes | Fragmentation: "));
-    // Serial.print(mon.frag_pct);
-    // Serial.println(F("%"));
+    Serial.println("[Screen Handler] Change Complete");
 }
+
+/** @brief Initialize the user interface
+ * This function creates all the screens and sets up the global dropdown menu.
+ */
+void ui_init() {
+    
+    home_screen     = create_home_screen();
+    sensor_screen   = create_sensor_screen();
+    manual_screen   = create_manual_control_screen();
+    warnings_screen = create_warnings_screen();
+    create_footer(warnings_screen);
+    settings_screen = create_settings_screen();
+    create_footer(sensor_screen);
+}
+
 
 void ensure_dropdown_style() {
     if (!dropdown_style_initialized) {
@@ -193,6 +210,67 @@ void create_header(lv_obj_t *parent, const char *title_txt) {
 
     // Global navigation dropdown (icon-only)
     Serial.println("[gH] creating GDL"); // Debug
+    
     create_global_dropdown(parent);
 }
+
+// Function to create the footer bar at the bottom of the screen
+// It displays the current system status and flashes red on warnings
+void create_footer(lv_obj_t *parent) {
+    lv_obj_t *scr = parent ? parent : lv_scr_act();
+    global_footer = lv_obj_create(scr);
+    lv_obj_set_size(global_footer, lv_pct(100), 60);
+    lv_obj_align(global_footer, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_style_bg_color(global_footer, lv_color_hex(0x1AC41F), 0);
+    lv_obj_set_style_bg_opa(global_footer, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(global_footer, LV_OBJ_FLAG_SCROLLABLE);
+
+    global_footer_label = lv_label_create(global_footer);
+    lv_label_set_long_mode(global_footer_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_width(global_footer_label, lv_pct(100));
+    lv_obj_align(global_footer_label, LV_ALIGN_CENTER, 0, 0);
+    lv_label_set_text(global_footer_label, "ALL SYSTEMS NOMINAL");
+    lv_obj_set_style_text_color(global_footer_label, lv_color_hex(0x094211), 0);
+    lv_obj_set_style_text_font(global_footer_label, &lv_font_montserrat_48, 0);
+    lv_obj_set_style_text_align(global_footer_label, LV_TEXT_ALIGN_CENTER, 0);
+}
+
+// Update footer based on active warnings mask
+void update_footer_status(uint32_t warning_mask) {
+    if(!global_footer || !global_footer_label) return;
+    // Only update the text when the mask actually changes:
+    char buf[128];
+    format_warnings(warning_mask, buf, sizeof(buf), global_footer_label);
+    if (buf[0] == '\0') {
+        // If the buffer is empty, just return
+        return;
+    }
+    lv_label_set_text(global_footer_label, buf);
+    prev_warning_mask = warning_mask;
+
+    // If no warnings, show green and bail out
+    if (warning_mask == WARN_NONE) {
+        lv_obj_set_style_bg_color(global_footer, lv_color_hex(0x1AC41F), 0);
+        lv_obj_set_style_text_align(global_footer_label, LV_TEXT_ALIGN_CENTER, 0);
+        // reset flash state so it restarts clean next time
+        footer_flash_state = false;
+        last_footer_flash = millis();
+        return;
+    }
+
+    // Otherwise, flash between dark and bright red every interval
+    uint32_t t = millis();
+    if (t - last_footer_flash >= FOOTER_FLASH_INTERVAL) {
+        last_footer_flash = t;
+        footer_flash_state = !footer_flash_state;
+        lv_color_t c = footer_flash_state
+                      ? lv_color_hex(0x8B0000)
+                      : lv_color_hex(0xFF0000);
+        lv_obj_set_style_bg_color(global_footer, c, 0);
+        lv_obj_set_style_text_color(global_footer_label, lv_color_hex(0xFFFFFF), 0);
+        
+    }
+    
+}
+
 //EOF

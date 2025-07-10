@@ -29,8 +29,8 @@ enum WarningMask {
     WARN_HIGH_TEMP     = 1 << 3,
 };
 
-void create_footer(lv_obj_t *parent);
-void update_footer_status(uint32_t warning_mask);
+// Add more warnings as needed
+void format_warnings(uint32_t mask, char *buf, size_t buf_sz, lv_obj_t *label);
 
 /**
  * Create & show the Warnings screen.

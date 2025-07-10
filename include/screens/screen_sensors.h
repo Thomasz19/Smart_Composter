@@ -31,5 +31,6 @@ bool read_sonar_packet(float &outInches);
 
 void SensorDataToSerial();
 
+void CameraDelayToSerial();
 
 #endif /* SCREEN_SENSORS_H */

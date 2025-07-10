@@ -25,6 +25,9 @@ typedef struct {
     uint32_t lastPumpEpoch;    // seconds since 1970 when pump last ran
     uint32_t lastBlowerEpoch;  // seconds since 1970 when blower sequence last ran
 
+    uint32_t camera_delay_sec;  // seconds to wait before taking a photo
+    uint32_t send_interval_min; // minutes between data uploads to server
+
 } Config;
 
 // A single global instance that your UI code will reference.

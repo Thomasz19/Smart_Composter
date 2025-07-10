@@ -9,11 +9,10 @@
 #include "logic/sensor_manager.h"
 #include "screens/screen_sensors.h"
 #include "screens/screen_warnings.h"
+#include "ui_manager.h"
 #include "TCA9548.h"
 #include <VL53L1X.h>
 #include "mbed.h"
-using namespace std::chrono_literals;
-static rtos::Mutex i2c_mutex;
 
 #define Oxygen_IICAddress ADDRESS_3
 #define TOF_ADDRESS       0x29  // Default VL53L1X I2C address
@@ -257,12 +256,15 @@ void Limit_Switch_update() {
             // home in on which door
             if (i == 0 || i == 1) {
                 Serial.println("Unloaded");
+                add_warning("Unloaded front door Opened");  // Add warning for front door
             }
             else if (i == 2 || i == 3) {
                 Serial.println("Unloaded");
+                add_warning("Unloaded back door Opened");  // Add warning for back door
             }
             else { // i == 4
                 Serial.println("Loaded");
+                add_warning("Loaded loading door Opened");  // Add warning for loading door
             }
         }
 

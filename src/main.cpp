@@ -96,6 +96,7 @@ static uint32_t lastSensorUpdate    = 0;
 static uint32_t lastLEDUpdate       = 0;
 static uint32_t lastSecurityCheck   = 0;
 static uint32_t lastActuatorSchedule= 0;
+static uint32_t camera_delay = 0; // For camera delay
 
 constexpr uint32_t SENSOR_INTERVAL_MS      = 1000;
 constexpr uint32_t LED_INTERVAL_MS         = 250;
@@ -114,6 +115,7 @@ mbed::LittleFileSystem user_data_fs("user");
 // ================= WATCH DOG =================
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 
+int selected_index = -1;
 
 // ================= INIT SETUP =================
 void setup() {
@@ -128,11 +130,7 @@ void setup() {
   lv_init();
 
   lv_disp_t *disp = lv_display_get_default();
-  lv_display_set_buffers(disp,
-                          buf1,    /* single buffer */
-                          buf2,
-                          sizeof(buf1),
-                          LV_DISPLAY_RENDER_MODE_PARTIAL);
+  lv_display_set_buffers(disp,buf1, buf2, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
   // Mount LittleFS (or reformat if running for the first time)
   Init_LittleFS();
@@ -156,12 +154,10 @@ void setup() {
 
   // Init Screens
   Serial.println("30...................");
-  //create_sensor_screen();
-  Serial.println("40...................");;
-  //create_warnings_screen();
-  Serial.println("50...................");
-  // Create the home screen
 
+  Serial.println("40...................");;
+
+  Serial.println("50...................");
 
   Serial.println("60...................");
   // Setup watchdog
@@ -169,9 +165,11 @@ void setup() {
 
   lv_log_register_print_cb(my_print);
 
-  // Init Diagnostic sceeen
+  ui_init(); // Initialize the UI screens
+
+  // Init Diagnostic screen
   handle_screen_selection("Home");
-  update_footer_status(FOOTER_OK);
+  //update_footer_status(FOOTER_OK);
 
   Serial.println("100...................");
 
@@ -187,61 +185,56 @@ void loop() {
 
   // Poll sensor data at defined interval
   if (now - lastSensorUpdate >= SENSOR_UPDATE_INTERVAL_MS) {
-    lv_obj_t* active = lv_screen_active();  // get the currently displayed screen
     sensor_manager_update();
     // Diagnostics screen updates
-    if (active == diag_screen) {
+    if (is_diagnostics_screen_active()) { // Diagnostics screen is active
       update_diagnostics_screen();
     }
     // Sensor screen updates
-    else if (is_sensor_screen_active()) {
+    else if (selected_index == 0) { // Sensor screen is active
       update_sensor_screen();
       Serial.println("Sensor screen updated");
     }
     lastSensorUpdate = now;  // Reset the last sensor update time
   }
 
-  // 2) LED status update (2 Hz)
+  // LED status update (2 Hz)
   if (now - lastLEDUpdate >= LED_INTERVAL_MS) {
     LED_Update();
     Limit_Switch_update();
     lastLEDUpdate = now;
   }
-    
-
-  //   // 4) Hourly actuators and limit switches
+ 
+  // Hourly actuators and limit switches
   if (now - lastActuatorSchedule >= ACTUATOR_SCHEDULE_MS) {
     scheduleHourlyActuators();
     lastActuatorSchedule = now;
   }
     
 
-  //     // 3) Security PIN timeout (0.5 Hz)
+  // Security PIN timeout (0.5 Hz)
   if (now - lastSecurityCheck >= SECURITY_CHECK_MS) {
     security_timeout_check();
     lastSecurityCheck = now;
   }
 
   // Inactivity timeout check
-  if (millis() - glast_input_time > INACTIVITY_TIMEOUT_MS) {
+  if (now - glast_input_time > INACTIVITY_TIMEOUT_MS) {
     handle_screen_selection("Home"); // Go back to home screen after timeout
-    glast_input_time = millis(); // Prevent repeated reloads
+    glast_input_time = now; // Prevent repeated reloads
   }
 
   // Timeout for security PIN
   // Send Data to Raspberry Pi every 10 seconds
-  if (millis() - input_time > 10000) {
+  if (now - input_time > getSendInterval()* 1000) {
     SensorDataToSerial();
-    input_time = millis();  // Reset the input time
+    
+    input_time = now;  // Reset the input time
   }
-  
-  // // if (strcmp(next_screen, last_screen) != 0) {
-  // //   handle_screen_selection(next_screen);  // Switch to the next screen if set
-  // //   strcpy(last_screen, next_screen);
-  // // }
+  CameraDelayToSerial();
 
+  // Keep the watchdog alive
   watchdog.kick();
-
 }
 
 // ================= FUNCTIONS =================

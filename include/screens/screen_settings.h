@@ -17,9 +17,9 @@
 
 lv_obj_t* create_settings_screen();
 
-void setup_ui_tab2(lv_obj_t *tab_2);
-void setup_ui_tab3(lv_obj_t *tab_3);
-void setup_ui_tab1(lv_obj_t *tab_1);
+void setup_ui_tab2();
+void setup_ui_tab3();
+void setup_ui_tab1();
 
 void settings_init_from_config(void);
 
@@ -41,6 +41,14 @@ uint16_t getBlowerOnTime();
 uint16_t getPumpOnTime();
 
 uint16_t getActivationInterval();
+
+uint16_t getCameraDelay();
+
+uint16_t getSendInterval();
+
+uint16_t getTempHighThreshold(int sensor_id);
+
+uint16_t getHumLowThreshold(int sensor_id);
 
 extern unsigned long last_activity;
 

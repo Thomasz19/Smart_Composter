@@ -31,4 +31,6 @@ void initActuatorScheduler();
 */
 void scheduleHourlyActuators();
 
+void ActuatorStatusToSerial();
+
 #endif // LOGIC_ACTUATOR_MANAGER_H

@@ -9,12 +9,7 @@
 #include "screens/screen_settings.h"
 #include "settings_storage.h"
 #include "screens/screen_manual.h"
-
-#define MINUTE1 60UL  // 1 minute in milliseconds
-#define MINUTE5 300UL // 5 minutes in milliseconds
-#define HOUR1 3600UL // 1 hour in milliseconds
-
-
+#include "logic/sensor_manager.h"
 
 // LED pins
 const int LED_PINS[] = {28, 30, 32};
@@ -36,6 +31,12 @@ enum BlowState { BLOW_IDLE, BLOW_RUN1, BLOW_RUN2 };
 static BlowState     blowState        = BLOW_IDLE;
 static unsigned long lastBlowerMillis = 0;
 static unsigned long blowStartMillis  = 0;
+
+// 30 minutes re-arm for pump, in seconds:
+static constexpr uint32_t PUMP_REARM_INTERVAL = 30 * 60;  
+static constexpr uint32_t BLOWER_REARM_INTERVAL = 30 * 60;
+// Edge-detect flag for blower-by-temperature:
+static bool blower_temp_triggered = false;
 
 // LED Functions
 void LED_Init() {
@@ -81,27 +82,31 @@ void LED_Update() {
 }
 
 
-// ─────────────────────────────────────────────────────────────────────────────
-/// Call this every loop()
+/**
+ * @brief Schedule hourly actuators (pump and blower).
+ * This function checks the current time against the last activation times
+ * and activates the pump and blower as per the configured intervals.
+ */
 void scheduleHourlyActuators() {
     uint32_t nowSec = (uint32_t)time(nullptr);
-
     uint32_t Interval = getActivationInterval();
-    // Serial.print("[Actuator1] Interval: ");
-    // Serial.println(Interval);
 
-    // switch (blowState) {
-    //     case BLOW_IDLE:   Serial.println("IDLE"); break;
-    //     case BLOW_RUN1:   Serial.println("RUN1"); break;
-    //     case BLOW_RUN2:   Serial.println("RUN2"); break;
-    // }
+   // Serial.println(nowSec-config.lastPumpEpoch);
 
-    //Serial.println(nowSec);
-    Serial.println(nowSec-config.lastPumpEpoch);
-  // ── Pump (only if not mid‐blower) ─────────────────────
+    bool dry = false;
+    for(int i = 0; i < 3; i++) {
+        
+        if(sensor_manager_get_humidity(i) < getHumLowThreshold(i)) {
+            dry = true;
+            break;
+        }
+    }
+
+    // ── Pump (only if not mid‐blower) ─────────────────────
     if (!pumpActive 
         && blowState == BLOW_IDLE
-        && (nowSec - config.lastPumpEpoch) >= Interval) 
+        && dry
+        && (nowSec - config.lastPumpEpoch) >= PUMP_REARM_INTERVAL) 
     {
         pumpActive          = true;
         pumpEndMillis       = millis() + (unsigned long)getPumpOnTime() * 1000UL;
@@ -118,6 +123,32 @@ void scheduleHourlyActuators() {
     }
 
     // ── Blower sequence ───────────────────────────────────
+    bool overTemp = false;
+    //Serial.print("[Actuator2] Checking temperature thresholds: ");
+    // for(int i = 0; i < 3; i++) {
+    //     Serial.println("Sensor ");
+    //     Serial.print(i);
+    //     Serial.print(": ");
+    //     Serial.print(sensor_manager_get_temperature(i)* 9.0f / 5.0f + 32.0f);
+    //     Serial.println("°F");
+    //     Serial.print("Threshold: ");
+    //     Serial.println(getTempHighThreshold(i));
+    // }
+    for(int i = 0; i < 3; i++) {
+        float tempC = sensor_manager_get_temperature(i);
+        float tempF = tempC * 9.0f / 5.0f + 32.0f;
+        if(tempF >= getTempHighThreshold(i)) {
+            overTemp = true;
+            break;
+        }
+    }
+    // If back below threshold, clear the one-shot flag
+    if(!overTemp) blower_temp_triggered = false;
+
+    // Serial.println(overTemp);
+    // Serial.println(nowSec - config.lastBlowerEpoch);
+    // Serial.println(Interval);
+
     if (blowState == BLOW_IDLE
         && !pumpActive
         && (nowSec - config.lastBlowerEpoch) >= Interval) 
@@ -129,6 +160,14 @@ void scheduleHourlyActuators() {
         config.lastBlowerEpoch = nowSec;      // persist the trigger time
         digitalWrite(BLOWER1_PIN, HIGH);
         saveConfig();
+    } else if ((overTemp && !pumpActive) && (nowSec - config.lastBlowerEpoch) >= Interval/3) {
+        blowState             = BLOW_RUN1;
+        blowStartMillis       = millis();
+        config.lastBlowerEpoch = nowSec;
+        digitalWrite(BLOWER1_PIN, HIGH);
+        Serial.println("[Actuator] Starting blower due to HIGH temp");
+        saveConfig();
+        blower_temp_triggered = true;
     }
 
     // blower1 timeout → blower2
@@ -150,8 +189,30 @@ void scheduleHourlyActuators() {
         blowState      = BLOW_IDLE;
         Serial.println("[Actuator2] Blower2 done, sequence complete.");
     }
-
+    ActuatorStatusToSerial();
     updateManualScreenLEDs(pumpActive, blowState);
 }
+
+void ActuatorStatusToSerial() {
+    // remember last state across calls
+    static bool prevPumpActive      = false;
+    static bool prevBlowerRun1      = false;
+    bool       currBlowerRun1       = (blowState == BLOW_RUN1);
+
+    // Pump just turned on?
+    if (pumpActive && !prevPumpActive) {
+        Serial.println("Pump:");
+    }
+
+    // Blower1 just turned on?
+    if (currBlowerRun1 && !prevBlowerRun1) {
+        Serial.println("Blower:");
+    }
+
+    // update saved state
+    prevPumpActive  = pumpActive;
+    prevBlowerRun1  = currBlowerRun1;
+}
+
 
 

@@ -7,7 +7,6 @@ Config config;
 // Adjust names if yours are different.
 
 
-
 // Path to the file we’ll store our settings in:
 static const char *CONFIG_PATH = "/user/config.bin";
 
@@ -47,6 +46,9 @@ void loadConfig() {
     uint32_t now = time(nullptr);
     config.lastPumpEpoch    = now;
     config.lastBlowerEpoch  = now;
+
+    config.camera_delay_sec = 5;  // default camera delay
+    config.send_interval_min = 15; // default send interval
 
     saveConfig();
 }

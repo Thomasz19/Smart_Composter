@@ -14,6 +14,7 @@
 #include "screens/screen_diagnostics.h" 
 #include "ui_manager.h"
 #include "logic/sensor_manager.h"
+#include "screens/screen_settings.h"
 
 // ================= extern prototype functions =================
 extern void global_input_event_cb(lv_event_t * e);
@@ -31,7 +32,6 @@ static const float MAX_DEPTH_CM = 111.0f;         // maximum sensor range
 static const int   BUF_SIZE     = 5;              // number of samples to average
 static const float OUTLIER_THRESH_CM = 20.0f;      // ignore changes >20 cm
 static int bar_val;
-lv_obj_t *sensor_screen = nullptr;
 // Maximum measurable compost depth in cm
 
 int8_t o2Channel;
@@ -186,7 +186,7 @@ static void update_sensor_values() {
 // =================== SCREEN DRIVER ===================
 lv_obj_t* create_sensor_screen(void) {
 
-    sensor_screen = lv_obj_create(NULL);
+    lv_obj_t *sensor_screen = lv_obj_create(NULL);
     
     // Register the global input event callback
     //lv_obj_add_event_cb(sensor_screen, global_input_event_cb, LV_EVENT_ALL, NULL);
@@ -202,11 +202,11 @@ lv_obj_t* create_sensor_screen(void) {
 
     // ===== Sensor Data Grid =====
     lv_obj_t *grid = lv_obj_create(sensor_screen);
-    lv_obj_set_size(grid, lv_pct(100), 300);
+    lv_obj_set_size(grid, lv_pct(100), 340);
     lv_obj_align(grid, LV_ALIGN_TOP_MID, 0, 65);
 
     static lv_coord_t col_dsc[] = { 200, 200, 180, LV_GRID_TEMPLATE_LAST };
-    static lv_coord_t row_dsc[] = { 60, 60, 60, 60, LV_GRID_TEMPLATE_LAST };
+    static lv_coord_t row_dsc[] = { 50, 60, 60, 60, 60, LV_GRID_TEMPLATE_LAST };
 
     lv_obj_set_grid_dsc_array(grid, col_dsc, row_dsc);
     lv_obj_set_layout(grid, LV_LAYOUT_GRID);
@@ -222,44 +222,58 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_set_style_line_width(line, 4, 0);
     lv_obj_align(line, LV_ALIGN_TOP_LEFT, 620, 80);  // Align just under row 0 of the grid
     
+    // Column titles
+    lv_obj_t *label_temp_title = lv_label_create(grid);
+    lv_label_set_text(label_temp_title, "Temp");
+    lv_obj_set_grid_cell(label_temp_title, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+    lv_obj_set_style_text_font(label_temp_title, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(label_temp_title, lv_color_black(), 0);
+
+    lv_obj_t *label_hum_title = lv_label_create(grid);
+    lv_label_set_text(label_hum_title, "Hum");
+    lv_obj_set_grid_cell(label_hum_title, LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+    lv_obj_set_style_text_font(label_hum_title, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_color(label_hum_title, lv_color_black(), 0);
+
     // ----- Row Labels + Sensor Value Labels -----
     for (int i = 0; i < 3; i++) {
         // Row titles (Sensor 1, 2, 3)
         lv_obj_t *label_sensor = lv_label_create(grid);
         lv_label_set_text_fmt(label_sensor, "Sensor %d", i + 1);
-        lv_obj_set_grid_cell(label_sensor, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, i, 1);
+        lv_obj_set_grid_cell(label_sensor, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_CENTER, i+1, 1);
         lv_obj_set_style_text_font(label_sensor, &lv_font_montserrat_48, 0);
         lv_obj_set_style_text_color(label_sensor, lv_color_black(), 0);
 
         // Temp
         label_temp[i] = lv_label_create(grid);
-        lv_obj_set_grid_cell(label_temp[i], LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, i, 1);
+        lv_obj_set_grid_cell(label_temp[i], LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, i+1, 1);
         lv_obj_set_style_text_font(label_temp[i], &lv_font_montserrat_48, 0);
         lv_obj_set_style_text_color(label_temp[i], lv_color_black(), 0);
 
         // Humidity
         label_hum[i] = lv_label_create(grid);
-        lv_obj_set_grid_cell(label_hum[i], LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, i, 1);
+        lv_obj_set_grid_cell(label_hum[i], LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, i+1, 1);
         lv_obj_set_style_text_font(label_hum[i], &lv_font_montserrat_48, 0);
         lv_obj_set_style_text_color(label_hum[i], lv_color_black(), 0);
     }
     
-    // Line 
-    lv_obj_t *line1 = lv_line_create(sensor_screen);
-    lv_line_set_points(line1, line_points, 2);
+    // Create a horizontal line at the bottom of the grid
+    static lv_point_precise_t line_points1[] = { {0, 0}, {620, 0} };
+    lv_obj_t * line1 = lv_line_create(sensor_screen);
+    lv_line_set_points(line1, line_points1, 2);
     lv_obj_set_style_line_color(line1, lv_color_black(), 0);
     lv_obj_set_style_line_width(line1, 4, 0);
-    lv_obj_align(line1, LV_ALIGN_TOP_LEFT, 0, 400-37+60);  // Align just under row 0 of the grid
+    lv_obj_set_pos(line1, 0, 350);
 
     // O2 Data
     lv_obj_t *label_o2_title = lv_label_create(grid);
     lv_label_set_text(label_o2_title, "O2 %");
-    lv_obj_set_grid_cell(label_o2_title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(label_o2_title, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 4, 1);
     lv_obj_set_style_text_font(label_o2_title, &lv_font_montserrat_48, 0);
     lv_obj_set_style_text_color(label_o2_title, lv_color_black(), 0);
 
     label_o2 = lv_label_create(grid);
-    lv_obj_set_grid_cell(label_o2, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_set_grid_cell(label_o2, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 4, 1);
     lv_obj_set_style_text_font(label_o2, &lv_font_montserrat_48, 0);
     lv_obj_set_style_text_color(label_o2, lv_color_black(), 0);
 
@@ -281,32 +295,37 @@ lv_obj_t* create_sensor_screen(void) {
 
     // Dynamic percentage label
     label_bar_pct = lv_label_create(sensor_screen);
-    lv_label_set_text(label_bar_pct, "0%%");
+    lv_label_set_text(label_bar_pct, "");
     lv_obj_set_style_text_font(label_bar_pct, &lv_font_montserrat_40, 0);
     
     
     
-    // Diagnostics button bottom-left
+    // USB “Diagnostics” button at top-left
     lv_obj_t *btn_diag = lv_btn_create(sensor_screen);
-    lv_obj_set_size(btn_diag, 140, 70);
-    lv_obj_align(btn_diag, LV_ALIGN_BOTTOM_RIGHT, -200, -60);
+
+    // 1) Size and position
+    lv_obj_set_size(btn_diag, 80, 74);
+    lv_obj_align(btn_diag, LV_ALIGN_TOP_RIGHT, -2, 2);
+
+    // 2) Style the background
+    lv_obj_set_style_bg_color(btn_diag, lv_color_hex(0x42649f), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa  (btn_diag, LV_OPA_COVER,           LV_PART_MAIN);
+    lv_obj_set_style_border_width(btn_diag, 0,                  LV_PART_MAIN);
+    
+    // 3) Load diagnostics on click
     lv_obj_add_event_cb(btn_diag, [](lv_event_t* e) {
         LV_UNUSED(e);
         lv_scr_load(create_diagnostics_screen());
     }, LV_EVENT_CLICKED, NULL);
+
+    // 4) USB symbol label
     lv_obj_t *lbl_diag = lv_label_create(btn_diag);
-    lv_label_set_text(lbl_diag, "Diagnostics");
+    lv_label_set_text(lbl_diag, LV_SYMBOL_USB);
+    lv_obj_set_style_text_color(lbl_diag, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl_diag, &lv_font_montserrat_40, 0);
     lv_obj_center(lbl_diag);
-    
-    //update_sensor_values(); // Initial values
-    // Create footer
-    create_footer(sensor_screen);
 
     return sensor_screen;
-}
-
-bool is_sensor_screen_active() {
-    return lv_scr_act() == sensor_screen;
 }
 
 void update_sensor_screen() {
@@ -316,8 +335,11 @@ void update_sensor_screen() {
 
 }
 
+/** @brief Send sensor data to Serial for debugging
+ * This function formats the sensor data and sends it over Serial.
+ */
 void SensorDataToSerial() {
-    // Print sensor data to Serial for debugging
+
     Serial.print("Data:");
     for (int i = 0; i < 3; i++) {
         float tempC = sensor_manager_get_temperature(i);
@@ -333,4 +355,17 @@ void SensorDataToSerial() {
     Serial.print(o2);
     Serial.print(",");
     Serial.println(bar_val);
+}
+static int old_camera_delay = -1;
+
+void CameraDelayToSerial() {
+    // Print camera delay to Serial for debugging
+    int camera_delay = getCameraDelay();
+    
+
+    if (camera_delay != old_camera_delay) {
+        old_camera_delay = camera_delay;
+        Serial.print("Delay:");
+        Serial.println(camera_delay);
+    }
 }

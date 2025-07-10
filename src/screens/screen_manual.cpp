@@ -86,7 +86,7 @@ lv_obj_t* create_manual_control_screen() {
     lv_obj_set_style_bg_color(act_btn, lv_color_hex(0x0e43b7), 0); 
     lv_obj_add_event_cb(act_btn, lock_overlay_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *act_lbl = lv_label_create(act_btn);
-    lv_label_set_text(act_lbl, "ACTIVATE\nBUTTON\nCONTROLS");
+    lv_label_set_text(act_lbl, "ACTIVATE\nMANUAL\nBUTTON\nCONTROLS");
     lv_obj_set_style_text_align(act_lbl, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_center(act_lbl);
     lv_obj_set_style_text_font(act_lbl, &lv_font_montserrat_48, 0);
@@ -107,13 +107,15 @@ lv_obj_t* create_manual_control_screen() {
     lv_obj_center(logout_lbl);
     lv_obj_set_style_text_font(logout_lbl, &lv_font_montserrat_40, 0);
 
-
-    create_footer(manual_screen);
     return manual_screen;
 }
 
 void updateManualScreenLEDs(bool pumpActive, int blowState) {
-    if (!manual_screen) return;
+    if (!manual_screen || !lv_obj_is_valid(manual_screen)) return;
+    for (int i = 0; i < 3; ++i) {
+        if (!led[i] || !lv_obj_is_valid(led[i])) return;
+    }
+    if (!logout_btn || !lv_obj_is_valid(logout_btn)) return;
 
     // pump LED
     if (pumpActive)      lv_led_on(led[2]);

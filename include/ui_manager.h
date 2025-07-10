@@ -29,8 +29,13 @@ void handle_screen_selection(const char *selected_label);
  */
 void create_header(lv_obj_t *parent, const char *title_txt);
 
-void dump_obj_tree(lv_obj_t *obj, int level = 0);
+void create_footer(lv_obj_t *parent);
+void update_footer_status(uint32_t warning_mask);
 
 void ensure_dropdown_style();
+
+extern int       selected_index;
+
+void ui_init();
 
 #endif /* UI_MANAGER_H */
