@@ -9,7 +9,7 @@
 * for monitoring and controlling the smart composting system.
 *
 * Features include:
-*  - Sensor data display (temperature, humidity, CO2, O2)
+*  - Sensor data display (temperature, humidity, O2)
 *  - Warning and status notifications
 *  - Pump/Blower control interface
 *  - History logging view
@@ -88,7 +88,6 @@ static uint32_t lastSensorUpdate    = 0;
 static uint32_t lastLEDUpdate       = 0;
 static uint32_t lastSecurityCheck   = 0;
 static uint32_t lastActuatorSchedule= 0;
-static uint32_t camera_delay = 0; // For camera delay
 
 constexpr uint32_t SENSOR_INTERVAL_MS      = 1000;
 constexpr uint32_t LED_INTERVAL_MS         = 250;
