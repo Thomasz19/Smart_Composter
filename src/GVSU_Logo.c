@@ -1,3 +1,15 @@
+/******************************************************************************
+ * @file    GVSU_Logo.c
+ * @author  Thomas Zoldowski
+ * @date    May 10, 2025
+ * @brief   GVSU Logo image data for the Smart Composter firmware.
+ * This file contains the pixel data for the GVSU logo, which is used in the user interface.
+ * This image is displayed on the startup screen of the Smart Composter.
+ *
+ * The image is stored in a format compatible with LVGL, the graphics library used in this project.
+ * The dimensions of the image are 800x236 pixels.
+ ******************************************************************************/
+
 #ifdef __has_include
     #if __has_include("lvgl.h")
         #ifndef LV_LVGL_H_INCLUDE_SIMPLE

@@ -16,18 +16,11 @@
 
 #include <lvgl.h>
 
-
-
-
+// Create and return the sensor screen object
 lv_obj_t* create_sensor_screen(void);
 
+// update the sensor screen with current data
 void update_sensor_screen(void);
-
-bool is_sensor_screen_active(void);
-
-void sonar_update_and_fill_bar();
-
-bool read_sonar_packet(float &outInches);
 
 void SensorDataToSerial();
 

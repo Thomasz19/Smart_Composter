@@ -27,6 +27,7 @@ static struct {
     {130.0, 160.0, 20.0},
 };
 
+// ---- Runtime configuration data ----
 enum ModalMode {
     MODAL_NONE,
     MODAL_SENSOR_PARAM,
@@ -70,7 +71,6 @@ static int        modal_field_id = -1;
 static lv_obj_t * modal_target_btn  = NULL;
 
 // Forward declarations
-
 static void change_pin_btn_cb(lv_event_t *e);
 static void show_modal_keypad(bool for_change);
 static void params_btn_cb(lv_event_t *e);
@@ -86,6 +86,10 @@ void logout_cb(lv_event_t *e) {
     //ui_manager_load_login_screen();  // Optional: switch to login screen
 }
 
+/** @brief Create the Settings screen.
+ *  This function initializes the settings screen with tabs for sensors, authentication, and configuration.
+ *  @return Pointer to the created settings screen object.
+ */
 lv_obj_t* create_settings_screen() {
     //Serial.println("[UI] Creating Settings screen"); // Debug
 
@@ -224,6 +228,10 @@ void setup_ui_tab1()
         lv_obj_set_style_text_color(label_row, lv_color_black(), 0);
         lv_obj_align(label_row, LV_ALIGN_CENTER, 0, 0);
         }
+
+        /* If you want to add buttons for the low temp threadshold, 
+        uncomment this section and make appropriate changes to the rows and columns*/
+        
         // Low (temp_low)
         // {
         // char buf[16];
@@ -1053,3 +1061,6 @@ static void show_lock_overlays(void) {
         lv_obj_center(lbl);
     }
 }
+
+// ps. sorry for the long code, but I wanted to keep it all together
+//     I hope it’s still readable and understandable!

@@ -14,11 +14,8 @@
 *  - Pump/Blower control interface
 *  - History logging view
 *
-* Dependencies:
-*  - arduino_gigaDisplay
-*  - arduino_gigaDisplayTouch
-*  - Adafruit GFX Library
-*  - LVGL
+* This firmware is designed to run on the Arduino GIGA R1 WiFi with the GIGA Display Shield.
+* It uses the LVGL graphics library for rendering the user interface.
 ******************************************************************************/
 
 // Ardunio
@@ -26,14 +23,13 @@
 
 // Mbed OS
 #include <mbed.h>
-#include "rtos.h"
+
 // Display Driver
 #include <lvgl.h>
 
 // C Library
 #include <stdio.h>
 #include <string.h>
-
 #include <errno.h>
 
 // LittleFS (Mbed)
@@ -63,21 +59,17 @@
 #include "logic/actuator_manager.h"
 #include "settings_storage.h"
 
-// Screen Pointers
-extern lv_obj_t* diag_screen;
-extern lv_obj_t* sensor_screen;
-
 #define CHUNK_LINES 7
 
+// Screen buffers
+// These buffers are used to store the screen content for LVGL rendering
+// Adjust the size according to your display resolution and needs
+// For example, for a 800x480 display with 7 lines of content:
 static lv_color_t buf1[800 * CHUNK_LINES];
 static lv_color_t buf2[800 * CHUNK_LINES];  // optional second buffer
 
-char next_screen[32] = {0}; // Pointer to the next screen to switch to
-char*last_screen = nullptr;
-
+// screen timeout
 unsigned long last_activity=0;
-//extern lv_obj_t* limit_switch_screen;
-//ConnectionStatus latest_status;
 
 Arduino_H7_Video  Display(800, 480, GigaDisplayShield);
 Arduino_GigaDisplayTouch  TouchDetector;
@@ -108,10 +100,6 @@ QSPIFBlockDevice root(QSPI_SO0, QSPI_SO1, QSPI_SO2, QSPI_SO3,  QSPI_SCK, QSPI_CS
 mbed::MBRBlockDevice user_data(&root, 3);
 mbed::LittleFileSystem user_data_fs("user");
 
-// Create a thread with a decent stack for your I²C work
-//static rtos::Thread sensorThread(osPriorityBelowNormal, 32 * 1024, nullptr, "SensorThread");
-//using namespace std::chrono_literals;
-
 // ================= WATCH DOG =================
 mbed::Watchdog &watchdog = mbed::Watchdog::get_instance();
 
@@ -125,10 +113,12 @@ void setup() {
   delay(2000);
   Serial.println("DEBUG: Serial.println working");
   
+  // Initialize the display and touch controller
   Display.begin();
   TouchDetector.begin();
   lv_init();
 
+  // Initialize the display driver
   lv_disp_t *disp = lv_display_get_default();
   lv_display_set_buffers(disp,buf1, buf2, sizeof(buf1), LV_DISPLAY_RENDER_MODE_PARTIAL);
 

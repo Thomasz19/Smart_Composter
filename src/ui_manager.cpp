@@ -79,9 +79,11 @@ static void dropdown_event_handler(lv_event_t * e) {
     }
 }
 
-/*
-Function: Create the drop down menu button with its items
-*/
+/** @brief Create a global dropdown menu for screen selection.
+ *  This function initializes a dropdown menu that allows users to switch between different screens.
+ *  It sets the dropdown's options and styles, and adds an event handler for selection changes.
+ *  @param parent Pointer to the parent object where the dropdown will be created.
+ */
 void create_global_dropdown(lv_obj_t *parent) {
 
     ensure_dropdown_style();
@@ -119,9 +121,11 @@ void create_global_dropdown(lv_obj_t *parent) {
 
 }
 
-/*
-Function: Handles the selection of each item in the drop down menu
-*/
+/** @brief Handle screen selection based on the dropdown menu.
+ *  This function changes the current screen based on the selected label from the dropdown menu.
+ *  It updates the selected index and loads the corresponding screen without animation.
+ *  @param selected_label The label of the selected screen from the dropdown menu.
+ */
 void handle_screen_selection(const char *selected_label) {
     Serial.println("[Screen Handler] changing Screens..."); // Debug
     int new_index = -1;
@@ -178,7 +182,10 @@ void ui_init() {
     create_footer(sensor_screen);
 }
 
-
+/** @brief Ensure the dropdown style is initialized.
+ * This function checks if the dropdown style has been initialized.
+ * If not, it initializes the style with custom properties.
+ */
 void ensure_dropdown_style() {
     if (!dropdown_style_initialized) {
         lv_style_init(&dropdown_list_style);
@@ -190,6 +197,12 @@ void ensure_dropdown_style() {
     }
 }
 
+/** @brief Create the header bar at the top of the screen.
+ *  This function creates a header bar with a title and a global dropdown menu.
+ *  @param parent Pointer to the parent object where the header will be created.
+ *  @param title_txt The title text to display in the header.
+ *  This function sets the header's background color, text color, and font.
+ */
 void create_header(lv_obj_t *parent, const char *title_txt) {
     Serial.println("[gH] creating header"); // Debug
     // Header Bar
@@ -214,8 +227,11 @@ void create_header(lv_obj_t *parent, const char *title_txt) {
     create_global_dropdown(parent);
 }
 
-// Function to create the footer bar at the bottom of the screen
-// It displays the current system status and flashes red on warnings
+/** @brief Create a footer bar at the bottom of the screen.
+ *  This function creates a footer bar with a label to display system status.
+ *  @param parent Pointer to the parent object where the footer will be created.
+ *  This function sets the footer's background color, text color, and font.
+ */
 void create_footer(lv_obj_t *parent) {
     lv_obj_t *scr = parent ? parent : lv_scr_act();
     global_footer = lv_obj_create(scr);
@@ -235,7 +251,12 @@ void create_footer(lv_obj_t *parent) {
     lv_obj_set_style_text_align(global_footer_label, LV_TEXT_ALIGN_CENTER, 0);
 }
 
-// Update footer based on active warnings mask
+/** @brief Update the footer status with the current warning mask.
+ *  This function formats the warning mask into a string and updates the footer label.
+ *  It also handles flashing the footer background color based on the warning state.
+ *  @param warning_mask The current warning mask to display in the footer.
+ *  This function checks if the warning mask has changed and updates the footer accordingly.
+ */
 void update_footer_status(uint32_t warning_mask) {
     if(!global_footer || !global_footer_label) return;
     // Only update the text when the mask actually changes:

@@ -12,8 +12,6 @@
 // Call once in setup() to initialize Wi-Fi and start the periodic upload.
 void network_init();
 
-void start_network();
-
 void network_update();
 
 #endif /* NETWORK_MANAGER_H */

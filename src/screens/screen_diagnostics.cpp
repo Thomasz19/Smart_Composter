@@ -19,6 +19,9 @@ static lv_obj_t* label_status_mux;
 static lv_obj_t* label_status_o2;
 static lv_obj_t* label_tof_status[2];  // VL53L1X sensors
 
+/** @brief Create the Diagnostics screen.
+ *  @return Pointer to the created diagnostics screen object.
+ */
 lv_obj_t* create_diagnostics_screen(void) {
     Serial.println("Creating Diagnostics Screen...");
     diag_screen = lv_obj_create(NULL);
@@ -102,10 +105,16 @@ lv_obj_t* create_diagnostics_screen(void) {
     return diag_screen;
 }
 
+/** @brief Check if the diagnostics screen is currently active.
+ *  @return True if the diagnostics screen is active, false otherwise.
+ */
 bool is_diagnostics_screen_active(void) {
     return lv_scr_act() == diag_screen;
 }
 
+/** @brief Update the diagnostics screen with the latest sensor connection status.
+ *  This function retrieves the current connection status of the sensors and updates the labels accordingly.
+ */
 void update_diagnostics_screen(void) {
 
     ConnectionStatus status = sensor_manager_get_connection_status();

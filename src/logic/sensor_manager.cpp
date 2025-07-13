@@ -56,6 +56,10 @@ float                 latest_hums[3];
 float                 latest_o2;
 float                 latest_depth_cm;
 
+/** @brief Initialize the sensor manager.
+ * This function initializes the I2C bus, the TCA9548 multiplexer, and all sensors.
+ * It also sets up the O₂ sensor and VL53L1X sensors.
+ */
 void sensor_manager_init() {
     o2Channel = -1;
     Wire.begin();           // Initialize I2C bus
@@ -116,7 +120,10 @@ void sensor_manager_init() {
 }
 
 
-
+/** @brief Update sensor readings.
+ * This function reads data from all sensors and updates the sensor_data array.
+ * It also checks the connection status of each sensor.
+ */
 void sensor_manager_update() {
     // Only read sensors that acknowledged on the bus
     ConnectionStatus status = sensor_manager_get_connection_status();
@@ -168,24 +175,45 @@ void sensor_manager_update() {
     tca.disableAllChannels();
 }
 
-
+/** @brief Get the latest temperature reading for a specific sensor.
+ * @param idx Index of the sensor (0-2).
+ * @return Temperature in Celsius, or NAN if the sensor is not available.
+ * This function retrieves the temperature reading from the sensor_data array.
+ */
 float sensor_manager_get_temperature(uint8_t idx) {
     return (idx < 6) ? sensor_data[idx].temperature : NAN;
 }
 
+/** @brief Get the latest humidity reading for a specific sensor.
+ * @param idx Index of the sensor (0-2).
+ * @return Humidity in percentage, or NAN if the sensor is not available.
+ * This function retrieves the humidity reading from the sensor_data array.
+ */
 float sensor_manager_get_humidity(uint8_t idx) {
     return (idx < 6) ? sensor_data[idx].humidity : NAN;
 }
 
+/** @brief Get the latest O₂ concentration reading.
+ * @return O₂ concentration in percentage, or NAN if the sensor is not available.
+ * This function retrieves the oxygen concentration from the o2Sensor object.
+ */
 float sensor_manager_get_oxygen(void) {
     return oxygen_level;
 }
 
+/** @brief Get the latest distance reading from a VL53L1X sensor.
+ * @param idx Index of the VL53L1X sensor (0-1).
+ * @return Distance in centimeters, or NAN if the sensor is not available.
+ * This function retrieves the distance reading from the tof_distance array.
+ */
 float sensor_manager_get_tof_distance(uint8_t idx) {
     return (idx < 2) ? tof_distance[idx] : NAN;
 }
 
-// Checks whether the mux and each sensor are present on the bus
+/** @brief Get the connection status of all sensors.
+ * @return ConnectionStatus structure containing the status of each sensor.
+ * This function checks the connection status of the TCA9548 multiplexer and all sensors.
+ */
 ConnectionStatus sensor_manager_get_connection_status() {
     
     ConnectionStatus status = {
@@ -224,13 +252,21 @@ ConnectionStatus sensor_manager_get_connection_status() {
     return status;
 }
 
-
+/** @brief Get the latest connection status.
+ * @return ConnectionStatus structure containing the latest status of each sensor.
+ * This function retrieves the latest connection status of the sensors
+ * and updates the latest_status variable.
+ */
 void Limit_Switch_Init() {
     for (uint8_t i = 0; i < 5; ++i) {
         pinMode(LIMIT_SWITCH_PINS[i], INPUT);  // Externally pulled high
     }
 }
 
+/** @brief Update the limit switch states and check for door openings.
+ * This function reads the state of each limit switch and updates the limit_switch_states array.
+ * It also checks if any door has been opened and adds a warning if necessary.
+ */
 void Limit_Switch_update() {
     uint32_t mask = WARN_NONE;
     static bool prev_closed[5] = { false, false, false, false, false };
@@ -282,17 +318,12 @@ void Limit_Switch_update() {
 }
 
 
-// Accessor function to get switch state
+/** @brief Check if a specific limit switch is closed.
+ * @param index Index of the limit switch (0-4).
+ * @return True if the limit switch is closed, false otherwise.
+ * This function checks the state of a specific limit switch and returns its status.
+ */
 bool Limit_Switch_isClosed(uint8_t index) {
     if (index < 5) return limit_switch_states[index];
     return false;
 }
-
-// void sensorTask() {
-//     while (true) {
-//         // 2) Do *all* I²C work here:
-//         sensor_manager_update();
-//         //Serial.println("Sensor task----1");
-//         rtos::ThisThread::sleep_for(2s);
-//     }
-// }

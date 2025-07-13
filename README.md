@@ -12,11 +12,8 @@ This project implements the firmware for a **Smart Composter System** using the 
 - **Warnings & Alerts**  
   Real-time warning system for abnormal composting conditions (e.g., overheating, Door Open).
 
-- **Motor & Fan Control**  
+- **Pump & Blower Control**  
   Shows status of air circulation motors and allows user control or automation.
-
-- **Historical Data Logging**  
-  Stores and displays logs of sensor readings over time.
 
 - **Touchscreen Interface**  
   Built using LVGL for responsive, easy-to-navigate screens.
@@ -27,10 +24,9 @@ This project implements the firmware for a **Smart Composter System** using the 
 
 - Arduino GIGA R1 WiFi
 - Arduino GIGA Display Shield
-- Environmental sensors (e.g. DHT22, MQ-135, O₂ sensor, etc.)
+- Raspberry Pi Zero 2 W
+- Environmental sensors
 - 120VAC Pump or Blowers
-- Relay or MOSFET motor drivers
-- Optional: SD card module or external EEPROM for data logging
 
 ---
 

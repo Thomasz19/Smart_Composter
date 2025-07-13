@@ -15,13 +15,10 @@
 
 #include <lvgl.h>
 
+// Create and return the manual control screen object
 lv_obj_t* create_manual_control_screen(void);
 
-/** @brief Updates the LED indicators on the manual control screen.
- * 
- * @param pumpActive True if the pump is currently active, false otherwise.
- * @param blowState The current state of the blower (1 for Blower 1, 2 for Blower 2, 0 for none).
- */
+// Check if manual control screen is currently active
 void updateManualScreenLEDs(bool pumpActive, int blowState);
 
 

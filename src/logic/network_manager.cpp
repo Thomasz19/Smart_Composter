@@ -6,6 +6,11 @@
  *          (manual HTTP, no ArduinoHttpClient).
  ******************************************************************************/
 
+/* NOTE: THIS FILE IS NOT USED BUT IF YOU EVER NEED TO SEND DATA TO A SERVER,
+ *       YOU CAN USE THIS AS A TEMPLATE.
+ *       IT USES Ticker TO SCHEDULE PERIODIC UPLOADS.
+ */
+
 #include <Arduino.h>
 #include <WiFi.h>             
 #include <Ticker.h>

@@ -15,6 +15,7 @@
 
 #include <lvgl.h>
 
+// Create and return the history screen object
 lv_obj_t* create_history_screen(void);
 
 #endif /* SCREEN_HISTORY_H */

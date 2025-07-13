@@ -33,6 +33,10 @@ const int TABLE_H   = SCREEN_H - HEADER_H - FOOTER_H;
 // How many warnings we’ve added so far
 static int warning_count = 0;
 
+/** @brief Add a warning to the warnings table.
+ *  This function adds a new warning to the table, updating the display and managing the warning count.
+ *  @param desc The description of the warning.
+ */
 static void warnings_table_draw_cb(lv_event_t * e)
 {
     // Get the low-level draw task and its base descriptor
@@ -81,6 +85,10 @@ static void warnings_table_draw_cb(lv_event_t * e)
         }
 }
 
+/** @brief Create the Warnings screen.
+ *  This function initializes the warnings screen with a table to display warnings.
+ *  @return Pointer to the created warnings screen object.
+ */
 lv_obj_t* create_warnings_screen() {
 
     lv_obj_t* warnings_screen = lv_obj_create(NULL);
@@ -121,6 +129,13 @@ lv_obj_t* create_warnings_screen() {
     return warnings_screen;
 }
 
+/** @brief Format warnings into a human-readable string.
+ *  This function formats the warning mask into a string for display.
+ *  @param mask The warning mask to format.
+ *  @param buf The buffer to store the formatted string.
+ *  @param buf_sz The size of the buffer.
+ *  @param label The label to update with the formatted string.
+ * */
 void format_warnings(uint32_t mask, char *buf, size_t buf_sz, lv_obj_t *label) {
     if(mask == WARN_NONE) {
         snprintf(buf, buf_sz, "ALL SYSTEMS NOMINAL");
@@ -140,6 +155,10 @@ void format_warnings(uint32_t mask, char *buf, size_t buf_sz, lv_obj_t *label) {
     if(mask & WARN_HIGH_TEMP)    append("HIGH TEMP");
 }
 
+/** @brief Add a warning to the warnings table.
+ *  This function adds a new warning to the table, updating the display and managing the warning count.
+ *  @param description The description of the warning.
+ */
 void add_warning(const char *description) {
     if(!warnings_table) return;
 

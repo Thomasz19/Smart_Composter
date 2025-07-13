@@ -1,3 +1,12 @@
+/******************************************************************************
+ * @file    settings_storage.cpp
+ * @author  Thomas Zoldowski
+ * @date    May 10, 2025
+ * @brief   Implementation of settings storage using LittleFS.
+ *
+ * This file handles loading and saving configuration settings for the Smart Composter firmware.
+ ******************************************************************************/
+
 #include "settings_storage.h"
 
 // These must match the extern in settings_storage.h:

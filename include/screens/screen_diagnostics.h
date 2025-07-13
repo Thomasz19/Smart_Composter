@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file screen_diagnostics.h
+ * @brief Header file for the diagnostics screen functionality.
+ * 
+ * This file contains declarations for functions related to creating,
+ * checking, and updating the diagnostics screen in the application.
+ ******************************************************************************/
 
 #ifndef SCREEN_DIAGNOSTICS_H
 #define SCREEN_DIAGNOSTICS_H

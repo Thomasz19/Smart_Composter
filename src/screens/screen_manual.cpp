@@ -18,15 +18,16 @@ lv_obj_t *logout_btn = nullptr; // Logout button handle
 
 // LED handles for each motor
 lv_obj_t *led[3];
-// Forward for keypad callback
-//static void show_keypad_cb(lv_event_t * e);
 
-
-
+/** @brief Callback for the logout button.
+ *  This function is triggered when the user clicks the logout button.
+ *  It handles the logout process and navigates back to the home screen.
+ *  @param e Pointer to the event data.
+ */
 lv_obj_t* create_manual_control_screen() {
+    
     manual_screen = lv_obj_create(NULL);
     
-
     // Debug
     Serial.println("Create manual screen");
 
@@ -110,6 +111,11 @@ lv_obj_t* create_manual_control_screen() {
     return manual_screen;
 }
 
+/** @brief Update the manual screen LEDs based on the current state of the motors.
+ *  This function updates the LED indicators for the motors and the logout button visibility based on the current state.
+ *  @param pumpActive True if the pump is active, false otherwise.
+ *  @param blowState The current state of the blowers (1 for blower 1, 2 for blower 2, 0 for both off).
+ */
 void updateManualScreenLEDs(bool pumpActive, int blowState) {
     if (!manual_screen || !lv_obj_is_valid(manual_screen)) return;
     for (int i = 0; i < 3; ++i) {

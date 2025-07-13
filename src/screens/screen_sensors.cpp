@@ -44,19 +44,10 @@ struct TempThresholds {
 
 TempThresholds temp_thresholds = {15.0, 30.0, 35.0};
 
-/*
-functions
-*/
-// static lv_color_t get_temp_color(float temp) { // WARNING: not used yet
-//     if (temp >= temp_thresholds.good_min && temp <= temp_thresholds.good_max)
-//         return lv_color_hex(0x1ac41f); // green
-//     else if (temp <= temp_thresholds.warn_max)
-//         return lv_color_hex(0xc4691a);  // Orange
-//     else
-//         return lv_color_hex(0xc41a1a); // red
-// }
-
-//sensor readings (replace with real sensor code)
+/** @brief Create the Sensor Data screen.
+ *  This function initializes the sensor data screen with labels and a compost level bar.
+ * @return Pointer to the created sensor screen object.
+ */
 static void update_sensor_values() {
     #if SIMULATION_MODE
         for (int i = 0; i < 6; i++) {
@@ -183,7 +174,11 @@ static void update_sensor_values() {
         Serial.println("Sensor update completed.");
     #endif
 }
-// =================== SCREEN DRIVER ===================
+
+/** @brief Create the Sensor Data screen.
+ *  This function initializes the sensor data screen with labels and a compost level bar.
+ * @return Pointer to the created sensor screen object.
+ */
 lv_obj_t* create_sensor_screen(void) {
 
     lv_obj_t *sensor_screen = lv_obj_create(NULL);
@@ -328,14 +323,14 @@ lv_obj_t* create_sensor_screen(void) {
     return sensor_screen;
 }
 
+/** @brief Update the sensor screen with current values.
+ *  This function retrieves the latest sensor data and updates the UI labels accordingly.
+ */
 void update_sensor_screen() {
     update_sensor_values();
-   
-    //Serial.println("Update data");
-
 }
 
-/** @brief Send sensor data to Serial for debugging
+/** @brief Send sensor data to Serial for raspberry pi processing.
  * This function formats the sensor data and sends it over Serial.
  */
 void SensorDataToSerial() {
@@ -358,11 +353,13 @@ void SensorDataToSerial() {
 }
 static int old_camera_delay = -1;
 
+/** @brief Print camera delay through serial to raspberry pi.
+ *  This function retrieves the camera delay and prints it to Serial if it has changed.
+ */
 void CameraDelayToSerial() {
     // Print camera delay to Serial for debugging
     int camera_delay = getCameraDelay();
     
-
     if (camera_delay != old_camera_delay) {
         old_camera_delay = camera_delay;
         Serial.print("Delay:");

@@ -47,19 +47,28 @@ void LED_Init() {
     }
 }
 
+/** * @brief Turn on all LEDs.
+ * This function sets all LED pins to HIGH, indicating the system is active.
+ */
 void LED_On() {
     for (int i = 0; i < 3; i++) {
         digitalWrite(LED_PINS[i], HIGH);
     }
 }
 
+/** * @brief Turn off all LEDs.
+ * This function sets all LED pins to LOW, indicating the system is inactive.
+ */
 void LED_Off() {
     for (int i = 0; i < 3; i++) {
         digitalWrite(LED_PINS[i], LOW);
     }
 }
 
-/// Call once from setup()
+/** @brief initialize the actuator scheduler.
+ * This function sets the pin modes for the pump and blower pins, initializes their states,
+ * and sets the last activation times to the current time.
+ */
 void initActuatorScheduler() {
   pinMode(PUMP_PIN,    OUTPUT);
   pinMode(BLOWER1_PIN, OUTPUT);
@@ -73,6 +82,9 @@ void initActuatorScheduler() {
   lastBlowerMillis = millis();
 }
 
+/** @brief Update the LED status based on the current security state.
+ * This function checks if the security is unlocked and updates the LED status accordingly.
+ */
 void LED_Update() {
 
     // check if security unlocked and activate buttons
@@ -124,16 +136,7 @@ void scheduleHourlyActuators() {
 
     // ── Blower sequence ───────────────────────────────────
     bool overTemp = false;
-    //Serial.print("[Actuator2] Checking temperature thresholds: ");
-    // for(int i = 0; i < 3; i++) {
-    //     Serial.println("Sensor ");
-    //     Serial.print(i);
-    //     Serial.print(": ");
-    //     Serial.print(sensor_manager_get_temperature(i)* 9.0f / 5.0f + 32.0f);
-    //     Serial.println("°F");
-    //     Serial.print("Threshold: ");
-    //     Serial.println(getTempHighThreshold(i));
-    // }
+
     for(int i = 0; i < 3; i++) {
         float tempC = sensor_manager_get_temperature(i);
         float tempF = tempC * 9.0f / 5.0f + 32.0f;
@@ -145,10 +148,7 @@ void scheduleHourlyActuators() {
     // If back below threshold, clear the one-shot flag
     if(!overTemp) blower_temp_triggered = false;
 
-    // Serial.println(overTemp);
-    // Serial.println(nowSec - config.lastBlowerEpoch);
-    // Serial.println(Interval);
-
+    // If blower was triggered by temperature, but now below threshold,
     if (blowState == BLOW_IDLE
         && !pumpActive
         && (nowSec - config.lastBlowerEpoch) >= Interval) 
@@ -193,6 +193,9 @@ void scheduleHourlyActuators() {
     updateManualScreenLEDs(pumpActive, blowState);
 }
 
+/** * @brief Send the current actuator status to Serial.
+ * This function sends the current state of the pump and blower to Serial for monitoring.
+ */
 void ActuatorStatusToSerial() {
     // remember last state across calls
     static bool prevPumpActive      = false;

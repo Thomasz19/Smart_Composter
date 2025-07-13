@@ -9,9 +9,12 @@
 #include "ui_manager.h"
 #include "screens/screen_warnings.h"
 
-
+// Screen handle
 static lv_obj_t* history_screen = nullptr;
 
+/** @brief Create the History screen.
+ *  @return Pointer to the created history screen object.
+ */
 lv_obj_t* create_history_screen(void) {
     Serial.println("[HS] Loading History Screen..."); // Debug
     history_screen = lv_obj_create(NULL);
