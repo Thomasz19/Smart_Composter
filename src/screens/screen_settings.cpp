@@ -992,6 +992,7 @@ void settings_init_from_config() {
 
     camera_delay_sec = config.camera_delay_sec;
     send_interval_min = config.send_interval_min;
+
 }
 
 /**

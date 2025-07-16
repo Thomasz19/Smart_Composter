@@ -27,7 +27,7 @@ static bool           pumpActive      = false;
 static unsigned long  pumpEndMillis   = 0;
 
 // State for blower sequence
-enum BlowState { BLOW_IDLE, BLOW_RUN1, BLOW_RUN2 };
+enum BlowState {BLOW_IDLE, BLOW_RUN1, BLOW_PAUSE, BLOW_RUN2 };
 static BlowState     blowState        = BLOW_IDLE;
 static unsigned long lastBlowerMillis = 0;
 static unsigned long blowStartMillis  = 0;
@@ -160,7 +160,7 @@ void scheduleHourlyActuators() {
         config.lastBlowerEpoch = nowSec;      // persist the trigger time
         digitalWrite(BLOWER1_PIN, HIGH);
         saveConfig();
-    } else if ((overTemp && !pumpActive) && (nowSec - config.lastBlowerEpoch) >= Interval/3) {
+    } else if ((overTemp && !pumpActive) && (nowSec - config.lastBlowerEpoch) >= Interval/3) {  //
         blowState             = BLOW_RUN1;
         blowStartMillis       = millis();
         config.lastBlowerEpoch = nowSec;
@@ -175,10 +175,18 @@ void scheduleHourlyActuators() {
         && (millis() - blowStartMillis) >= (unsigned long)getBlowerOnTime() * 1000UL)
     {
         digitalWrite(BLOWER1_PIN, LOW);
+        blowState       = BLOW_PAUSE;
+        blowStartMillis = millis();
+        Serial.println("[Actuator2] Blower1 done, starting blower2...");
+    }
+
+    if (blowState == BLOW_PAUSE
+    && (millis() - blowStartMillis) >= 1000UL)   // 1 second delay
+    {
         blowState       = BLOW_RUN2;
         blowStartMillis = millis();
         digitalWrite(BLOWER2_PIN, HIGH);
-        Serial.println("[Actuator2] Blower1 done, starting blower2...");
+        Serial.println("[Actuator] Starting blower2 after 1s pause...");
     }
 
     // blower2 timeout → done
