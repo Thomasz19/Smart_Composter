@@ -25,6 +25,7 @@ static lv_obj_t *label_temp[3];
 static lv_obj_t *label_hum[3];
 static lv_obj_t *label_o2;
 static lv_obj_t *label_bar_pct;  // dynamic percentage label
+static lv_obj_t *lbl_tmp117;
 
 static lv_obj_t *bar_level;  // Compost level bar
 // Configuration for TOF buffering
@@ -171,6 +172,15 @@ static void update_sensor_values() {
             // offset label to left of bar and centered vertically
             lv_obj_set_pos(label_bar_pct, coords.x1 - 90, y - 24);
         }
+
+        char hdr[32];
+        if (!isnan(getExternalTemperature())) {
+            snprintf(hdr, sizeof(hdr), "%.1fF", getExternalTemperature());
+        } else {
+            strcpy(hdr, "--F");
+        }
+        lv_label_set_text(lbl_tmp117, hdr);
+
         Serial.println("Sensor update completed.");
     #endif
 }
@@ -293,10 +303,20 @@ lv_obj_t* create_sensor_screen(void) {
     lv_label_set_text(label_bar_pct, "");
     lv_obj_set_style_text_font(label_bar_pct, &lv_font_montserrat_40, 0);
     
-    
+    lbl_tmp117 = lv_label_create(sensor_screen);
+
+    // Set initial text — this will be updated dynamically
+    lv_label_set_text(lbl_tmp117, "--F");
+
+    // Set style: white text, medium size font (adjust as needed)
+    lv_obj_set_style_text_color(lbl_tmp117, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl_tmp117, &lv_font_montserrat_36, 0);
+
     
     // USB “Diagnostics” button at top-left
     lv_obj_t *btn_diag = lv_btn_create(sensor_screen);
+
+    lv_obj_align_to(lbl_tmp117, btn_diag, LV_ALIGN_OUT_LEFT_MID, -6, 0);
 
     // 1) Size and position
     lv_obj_set_size(btn_diag, 80, 74);

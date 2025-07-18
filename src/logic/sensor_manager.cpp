@@ -17,6 +17,10 @@
 #define Oxygen_IICAddress ADDRESS_3
 #define TOF_ADDRESS       0x29  // Default VL53L1X I2C address
 
+const uint8_t TMP117_ADDR       = 0x48;   // 0x48–0x4B depending on ADR pin
+const uint8_t TMP117_TEMP_REG   = 0x00;   // Temperature Result register
+float         boardTempF        = NAN;    // make this global so UI can read it
+
 // Limit Switches
 constexpr uint8_t LIMIT_SWITCH_PINS[5] = { D0, D1, D2, D3, D4 };
 bool limit_switch_states[5] = {false, false, false, false, false};
@@ -116,6 +120,11 @@ void sensor_manager_init() {
 
     // Deselect all channels to avoid bus conflicts
     tca.disableAllChannels();
+
+    Wire.beginTransmission(TMP117_ADDR);
+    Wire.write(0x01);            // Configuration register
+    Wire.write(0x06); Wire.write(0x00);   // 0x0600 = continuous, 15‑Hz, avg = 1
+    Wire.endTransmission();
     
 }
 
@@ -173,6 +182,29 @@ void sensor_manager_update() {
 
     // Deselect all channels to avoid conflicts
     tca.disableAllChannels();
+
+    Wire.beginTransmission(TMP117_ADDR);
+    Wire.write(TMP117_TEMP_REG);
+
+    // Send a repeated‑START (false) so we can immediately read
+    if (Wire.endTransmission(false) == 0 &&
+        Wire.requestFrom(TMP117_ADDR, (uint8_t)2) == 2)            // 2 bytes, MSB first
+    {
+        int16_t raw = (Wire.read() << 8) | Wire.read();            // combine MSB/LSB
+        boardTempF  = raw * 0.0078125f * 9.0f / 5.0f + 32.0f;       // °F conversion
+    }
+    else {
+        boardTempF = NAN;
+}
+
+}
+
+/** @brief Get the latest external temperature in Fahrenheit.
+ * @return The external temperature in Fahrenheit, or NAN if not available.
+ * This function retrieves the board temperature from the TMP117 sensor.
+ */
+float getExternalTemperature() {
+    return boardTempF; // Return the board temperature in Fahrenheit
 }
 
 /** @brief Get the latest temperature reading for a specific sensor.
@@ -220,7 +252,7 @@ ConnectionStatus sensor_manager_get_connection_status() {
         .mux    = false,
         .sensor = { false, false, false },
         .o2     = false,
-        .vl53   = { false, false }
+        .vl53   = { false, false },
     };
     
     // Test multiplexer at 0x70

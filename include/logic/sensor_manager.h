@@ -38,7 +38,11 @@ float sensor_manager_get_temperature(uint8_t idx);
 /** Get the latest humidity (%) for sensor `idx` (0-based). */
 float sensor_manager_get_humidity(uint8_t idx);
 
+/** Get the latest O₂ concentration (%) from the SEN0322 sensor. */
 float sensor_manager_get_oxygen(void);
+
+/** Get the latest external temperature (°F) from the TMP117 sensor. */
+float getExternalTemperature();
 
 // Check and return connection status for mux and sensors
 ConnectionStatus sensor_manager_get_connection_status(void);
@@ -50,8 +54,6 @@ void Limit_Switch_update();
 bool Limit_Switch_isClosed(uint8_t index);
 
 extern bool limit_switch_states[5];
-
-void sonar_sensor_update();
 
 float sensor_manager_get_tof_distance(uint8_t idx);
 
