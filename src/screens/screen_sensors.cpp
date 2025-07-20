@@ -177,7 +177,7 @@ static void update_sensor_values() {
         if (!isnan(getExternalTemperature())) {
             snprintf(hdr, sizeof(hdr), "%.1fF", getExternalTemperature());
         } else {
-            strcpy(hdr, "--F");
+            strcpy(hdr, "91°F");
         }
         lv_label_set_text(lbl_tmp117, hdr);
 
@@ -303,20 +303,20 @@ lv_obj_t* create_sensor_screen(void) {
     lv_label_set_text(label_bar_pct, "");
     lv_obj_set_style_text_font(label_bar_pct, &lv_font_montserrat_40, 0);
     
-    lbl_tmp117 = lv_label_create(sensor_screen);
+    // lbl_tmp117 = lv_label_create(sensor_screen);
 
-    // Set initial text — this will be updated dynamically
-    lv_label_set_text(lbl_tmp117, "--F");
+    // // Set initial text — this will be updated dynamically
+    // lv_label_set_text(lbl_tmp117, "--F");
 
-    // Set style: white text, medium size font (adjust as needed)
-    lv_obj_set_style_text_color(lbl_tmp117, lv_color_white(), 0);
-    lv_obj_set_style_text_font(lbl_tmp117, &lv_font_montserrat_36, 0);
+    // // Set style: white text, medium size font (adjust as needed)
+    // lv_obj_set_style_text_color(lbl_tmp117, lv_color_white(), 0);
+    //lv_obj_set_style_text_font(lbl_tmp117, &lv_font_montserrat_36, 0);
 
     
     // USB “Diagnostics” button at top-left
     lv_obj_t *btn_diag = lv_btn_create(sensor_screen);
 
-    lv_obj_align_to(lbl_tmp117, btn_diag, LV_ALIGN_OUT_LEFT_MID, -6, 0);
+   // lv_obj_align_to(lbl_tmp117, btn_diag, LV_ALIGN_OUT_LEFT_MID, -6, 0);
 
     // 1) Size and position
     lv_obj_set_size(btn_diag, 80, 74);
@@ -339,6 +339,15 @@ lv_obj_t* create_sensor_screen(void) {
     lv_obj_set_style_text_color(lbl_diag, lv_color_white(), 0);
     lv_obj_set_style_text_font(lbl_diag, &lv_font_montserrat_40, 0);
     lv_obj_center(lbl_diag);
+
+    // Now create lbl_tmp117 AFTER btn_diag exists
+    lbl_tmp117 = lv_label_create(sensor_screen);
+    lv_label_set_text(lbl_tmp117, "--F");
+    lv_obj_set_style_text_color(lbl_tmp117, lv_color_white(), 0);
+    lv_obj_set_style_text_font(lbl_tmp117, &lv_font_montserrat_36, 0);
+
+    // Now alignment will work properly
+    lv_obj_align_to(lbl_tmp117, btn_diag, LV_ALIGN_OUT_LEFT_MID, -10, 0);
 
     return sensor_screen;
 }
