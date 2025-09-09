@@ -26,7 +26,7 @@ This project implements the firmware for a **Smart Composter System** using the 
 - Arduino GIGA Display Shield
 - Raspberry Pi Zero 2 W
 - Environmental sensors
-- 120VAC Pump or Blowers
+- 120VAC 1 Pump and 2 Blowers
 
 ---
 
