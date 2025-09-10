@@ -61,7 +61,10 @@ This project implements the firmware for a **Smart Composter System** using the 
    ```bash
    Select the Arduino GIGA R1 WiFi board and upload via USB.
    ```
-
+## Getting Started w/ Raspberry Pi Zero 2 W
+  ```bash
+   Download the file named "SmartComposter_RaspberryPi.py"
+   ```
 ## Authors
 
 **Thomas Zoldowski** – Computer Engineering Student at Grand Valley State University  
