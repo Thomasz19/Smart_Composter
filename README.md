@@ -41,7 +41,7 @@ This project implements the firmware for a **Smart Composter System** using the 
 
 ---
 
-## Getting Started
+## Getting Started w/ Arduino Giga R1 Wifi
 
 1. **Clone the Repository**
 
